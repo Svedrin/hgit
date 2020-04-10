@@ -197,7 +197,7 @@ function hgit_diff {
     while [ -n "${1:-}" ]; do
         case "$1" in
             -h|--help)
-                echo "View differences of a file vs the one in the repo."
+                echo "View differences of a file in the workdir vs the one in the repo."
                 echo
                 echo "Usage: hgit diff [-c <commit ID>] [files]"
                 echo
@@ -228,7 +228,13 @@ function hgit_d {
 }
 
 function hgit_cachediff {
-    git diff --no-prefix --cached -- "$@"
+    if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
+        echo "View differences of the staging area vs the repo."
+        echo
+        echo "Usage: hgit cachediff"
+        return
+    fi
+    git diff --no-prefix --cached
 }
 
 function hgit_dc {
