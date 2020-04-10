@@ -266,7 +266,41 @@ function hgit_dc {
 # Commit
 
 function hgit_commit {
-    git commit "$@"
+    MESSAGE=""
+    FILES=()
+    while [ -n "${1:-}" ]; do
+        case "$1" in
+            -h|--help)
+                echo "Commit changes from the workdir. If no files are given, commits"
+                echo "whatever is currently in the staging area. See \`hgit cachediff\`"
+                echo "to check what's in there."
+                echo
+                echo "Usage: hgit commit [-m <commit message>] [files]"
+                echo
+                echo "Options:"
+                echo " -h --help             This help text"
+                echo " -m --message          Commit changes with the specified message."
+                return
+                ;;
+            -m|--message)
+                MESSAGE="$2"
+                shift
+                ;;
+            -*)
+                echo "Unknown option $1"
+                return 1
+                ;;
+            *)
+                FILES+=("$1")
+                ;;
+        esac
+        shift
+    done
+    if [ -n "$MESSAGE" ]; then
+        git commit -m "$MESSAGE" -- "${FILES[@]}"
+    else
+        git commit -- "${FILES[@]}"
+    fi
 }
 
 function hgit_ci {
