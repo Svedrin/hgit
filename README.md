@@ -9,6 +9,8 @@ opinionated in the sense that it hides lotsa stuff and redefines commands comple
 * use, forget don't exist in git, but I wish they did
 * no rebase
 * "use master" performs implicit fetch --prune from your fork so you don't have to
+* intentionally cripples commands that I find too powerful, such as "git commit -a"
+* prevents you from running into situations that are weirdly more complex than you'd anticipate (wtf is a "detached HEAD"!?)
 is is thus focues on making your everyday life with git easier, rather than fully supporting everything that git has to offer.
 
 status is way too long - st is a shorter command and provides more useful output
