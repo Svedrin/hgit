@@ -113,7 +113,7 @@ Then:
 
 # Compatibility with git
 
-`hgit` is just a shell script that works on top of git commands. You can switch back and forth anytime. However, `hgit` does expect the local repo to be set up in a certain way, and if you disturb that, you'll find that commands don't work anymore and you'll have to resort to their underlying `git` counterparts.
+`hgit` is just a shell script that works on top of git commands. You can switch back and forth anytime. However, `hgit` does expect the local repo to be set up in a certain way, and if you disturb that, you'll find that commands don't work anymore and you'll have to resort to their underlying `git` counterparts fnord.
 
 
 # Config
