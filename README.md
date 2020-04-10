@@ -63,9 +63,9 @@ Go ahead and do:
 
 This will:
 
-* `git clone git@github.com:octocat/Spoon-Knife.git`
+* `git clone git@github.com:octocat/Spoon-Knife.git spoon-knife` (the repo name gets lowercased before cloning)
 * Check if you have a fork, and if so:
-* `cd Spoon-Knife`
+* `cd spoon-knife`
 * `git remote add <your-name> git@github.com:<your-name>/Spoon-Knife.git`
 * `git fetch <your-name>`
 
