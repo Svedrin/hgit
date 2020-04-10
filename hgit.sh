@@ -168,11 +168,25 @@ function hgit_clone () {
 # Status
 
 function hgit_status () {
-    git status "$@"
+    if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
+        echo "Show the current status of the working directory and which branch we're in."
+        echo "Uses a pretty verbose syntax, see \`hgit st\` for a shorter one."
+        echo
+        echo "Usage: hgit status [-h|--help]"
+        return
+    fi
+    git status
 }
 
 function hgit_st () {
-    git status --short --branch "$@"
+    if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
+        echo "Show the current status of the working directory and which branch we're in."
+        echo "Uses a pretty concise syntax, see \`hgit status\` for a more verbose one."
+        echo
+        echo "Usage: hgit st [-h|--help]"
+        return
+    fi
+    git status --short --branch
 }
 
 # Diff
