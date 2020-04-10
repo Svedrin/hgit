@@ -157,7 +157,7 @@ function hgit_clone {
     OWNER_AND_REPO="$(cut -c 16- <<<"$URL")"
     OWNER="$(cut -d/ -f1 <<<"$OWNER_AND_REPO")"
     REPO="$(cut -d/ -f2 <<<"$OWNER_AND_REPO" | sed 's/.git$//')"
-    INTO="${2:-$REPO}"
+    INTO="${2:-${REPO,,}}"
 
     git clone "$1" "$INTO"
 
