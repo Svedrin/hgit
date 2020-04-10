@@ -432,7 +432,7 @@ function hgit_pull {
 }
 
 function hgit_push {
-    if [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+    if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
         echo "Push changes to a remote."
         echo
         echo "Usage: hgit push [-h|--help] [<remote>]"
