@@ -705,10 +705,22 @@ function hgit_pr {
 # File ops
 
 function hgit_forget {
+    if [ -z "${1:-}" ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+        echo "Forget about changes we added to the staging area."
+        echo
+        echo "Usage: hgit forget [-h|--help] <files>"
+        return
+    fi
     git reset HEAD -- "$@"
 }
 
 function hgit_revert {
+    if [ -z "${1:-}" ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+        echo "Revert a file in the workdir to whatever is in the repo."
+        echo
+        echo "Usage: hgit revert [-h|--help] <files>"
+        return
+    fi
     git checkout -- "$@"
 }
 
@@ -753,6 +765,15 @@ function hgit_rm {
 }
 
 function hgit_ignore {
+    if [ -z "${1:-}" ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+        echo "Add paths to the .gitignore file and commit it."
+        echo
+        echo "Usage: hgit ignore [-h|--help] <files>"
+        echo
+        echo "Paths will be added relative to the root directory, no matter how you"
+        echo "specify them - don't worry about syntax, just fire away :)"
+        return
+    fi
     REPO_ROOT="$(git rev-parse --show-toplevel)"
     while [ -n "${1:-}" ]; do
         IGNORE_PATH="$(realpath --relative-to="$REPO_ROOT" "$1")"
