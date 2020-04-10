@@ -78,6 +78,7 @@ This will:
     hgit c index.html                           # shows a diff only of index.html
     hgit c index.html -m "made some changes"    # commits index.html
     hgit push                                   # pushes the branch to your fork
+    hgit pr                                     # opens your browser so you can submit a PR
     hgit use master                             # switch back to master
 
 ## Pull changes from an existing branch
