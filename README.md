@@ -9,6 +9,7 @@ opinionated in the sense that it hides lotsa stuff and redefines commands comple
 * use, forget don't exist in git, but I wish they did
 * no rebase
 * "use master" performs implicit fetch --prune from your fork so you don't have to
+is is thus focues on making your everyday life with git easier, rather than fully supporting everything that git has to offer.
 
 status is way too long - st is a shorter command and provides more useful output
 
@@ -23,6 +24,17 @@ after hgit use master: automatically fetch --prune to delete the now-probably-go
 
 hgit branch -> CREATE ONE rather than force me to check out a thing that does not yet exist, wtf
 
+# Is it for me?
+
+hgit is probably for you if you liked HG and SVN, and you're used to cloning your repos something like this:
+
+    git clone git@github.com:octocat/Spoon-Knife.git
+    cd Spoon-Knife
+    git remote add svedrin git@github.com:Svedrin/Spoon-Knife.git
+    git remote add otherfolks git@github.com:OtherFolks/Spoon-Knife.git
+    git remote add someoneelse git@github.com:SomeOneElse/Spoon-Knife.git
+
+If this sounds vaguely familiar, hgit may work for you. If not, then many of hgit's assumptions are probably going to bite you rather than help you.
 
 # Workflow for a repo of your own (you own it)
 
