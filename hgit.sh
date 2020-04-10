@@ -165,7 +165,7 @@ function hgit_clone () {
 }
 
 function hgit_checkout {
-    echo "The checkout command wields no power here. You're probably looking for one of these:"
+    echo "The checkout command has no power here. You're probably looking for one of these:"
     echo
     echo  " branch, b             Create a new branch."
     echo  " branch-from           Create a new branch from a specific commit or tag."
