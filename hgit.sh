@@ -29,6 +29,7 @@ while [ -n "${1:-}" ]; do
             echo
             echo  " init                  Initialize a new git repo in a directory."
             echo  " clone                 Clone a remote repo, plus your fork if you have one."
+            echo  " collab-with           Add a remote for collaborating with another GitHub user."
             echo  " branch, b             Create a new branch."
             echo  " branch-from           Create a new branch from a specific commit or tag."
             echo  " branches              List existing branches."
@@ -169,6 +170,32 @@ function hgit_clone {
         cd "$INTO"
         git remote add "$(hgit_my_fork)" "$MY_REMOTE_URL"
         git fetch "$(hgit_my_fork)"
+    fi
+}
+
+function hgit_collab_with {
+    if [ -z "${1:-}" ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+        echo "Set up the repo so we can collaborate with another GitHub user."
+        echo
+        echo "Usage: hgit collab-with [-h|--help] <GitHub user>"
+        return
+    fi
+
+    COLLAB_USER="$1"
+
+    ORIGIN_URL="$(git remote get-url "origin")"
+    # See if this even is a GitHub repo at all
+    if [ "$(cut -c -15 <<<"$ORIGIN_URL")" != "git@github.com:" ]; then
+        echo "Sorry, not a GitHub repo, so I don't know how to collab with people here."
+        return
+    fi
+
+    ORIGIN_OWNER_AND_REPO="$(cut -c 16- <<<"$ORIGIN_URL")"
+    ORIGIN_REPO="$(cut -d/ -f2 <<<"$ORIGIN_OWNER_AND_REPO" | sed 's/.git$//')"
+
+    REMOTE_URL="git@github.com:${COLLAB_USER}/${ORIGIN_REPO}.git"
+    if git ls-remote --heads "$REMOTE_URL" &>/dev/null; then
+    git remote add "${COLLAB_USER,,}" "$REMOTE_URL"
     fi
 }
 
