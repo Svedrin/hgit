@@ -647,7 +647,35 @@ function hgit_re {
 }
 
 function hgit_add {
-    git add -- "$@"
+    if [ -z "${1:-}" ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+        echo "Add files to the staging area, to be picked up by the next commit."
+        echo
+        echo "Usage: hgit add [-h|--help] [-p|--patch] <files>"
+        echo
+        echo "This is useful when:"
+        echo
+        echo " * You want to commit a file that the repo doesn't even know about yet."
+        echo
+        echo " * You have edited a file and only want to commit some parts of the"
+        echo "   changes you made. In this case, call \`hgit add -p <your-file>\`,"
+        echo "   select the changes, and when you're done, \`hgit commit\` them."
+        echo
+        echo " * You're about to commit a huge change and want to collect the changes"
+        echo "   before committing them in a way that you can check as you go using"
+        echo "   \`hgit cachediff\`."
+        echo
+        echo "Reverse conclusion:"
+        echo
+        echo "If none of these apply and you've just made a few changes and want to"
+        echo "just get them into the damn repo, you can skip this step and straight"
+        echo "away use \`hgit commit\` or \`hgit change\` on that file."
+        return
+    fi
+    if [ "${1:-}" = "-p" ] || [ "${1:-}" = "--patch" ] || [ "${1:-}" = "--partial" ]; then
+        git add -p -- "$@"
+    else
+        git add -- "$@"
+    fi
 }
 
 function hgit_rm {
