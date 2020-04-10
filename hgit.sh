@@ -81,19 +81,19 @@ done
 
 # Helper functions
 
-function hgit_my_fork () {
+function hgit_my_fork {
     echo "${MY_GITHUB_USER,,}"
 }
 
-function hgit_have_remote () {
+function hgit_have_remote {
     git remote | grep -q "^$1$"
 }
 
-function hgit_have_fork () {
+function hgit_have_fork {
     hgit_have_remote "$(hgit_my_fork)"
 }
 
-function hgit_remote_for_branch () {
+function hgit_remote_for_branch {
     BRANCH="$1"
     git branch --format='%(refname:short) %(upstream:remotename)' | while read branch remote; do
         if [ "$branch" = "$BRANCH" ] && [ -n "$remote" ]; then
@@ -113,7 +113,7 @@ function hgit_last_commit_not_yet_pushed {
 
 # Init, clone
 
-function hgit_init () {
+function hgit_init {
     if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
         echo "Create a new git repo in a directory."
         echo
@@ -130,7 +130,7 @@ function hgit_init () {
     git init "$REPO"
 }
 
-function hgit_clone () {
+function hgit_clone {
     if [ -z "${1:-}" ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
         echo "Clone an existing repo, and if it's from GitHub and you"
         echo "have a fork, clone that too."
@@ -189,7 +189,7 @@ function hgit_co {
 
 # Status
 
-function hgit_status () {
+function hgit_status {
     if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
         echo "Show the current status of the working directory and which branch we're in."
         echo "Uses a pretty verbose syntax, see \`hgit st\` for a shorter one."
@@ -200,7 +200,7 @@ function hgit_status () {
     git status
 }
 
-function hgit_st () {
+function hgit_st {
     if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
         echo "Show the current status of the working directory and which branch we're in."
         echo "Uses a pretty concise syntax, see \`hgit status\` for a more verbose one."
@@ -307,7 +307,7 @@ function hgit_ci {
     hgit_commit "$@"
 }
 
-function hgit_change () {
+function hgit_change {
     #set -x
     MESSAGE=""
     FILES=()
@@ -438,7 +438,7 @@ function hgit_branches {
     git branch -l
 }
 
-function hgit_use () {
+function hgit_use {
     if [ -z "${1:-}" ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
         echo "Find and switch to an existing branch."
         echo
@@ -539,7 +539,7 @@ function hgit_branch_from {
     hgit_use "$1"
 }
 
-function hgit_kill () {
+function hgit_kill {
     if [ -z "${1:-}" ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
         echo "Delete a branch."
         echo
@@ -880,7 +880,7 @@ function hgit_ignore {
     done
 }
 
-function hgit_cat () {
+function hgit_cat {
     if [ -z "${1:-}" ]; then
         echo "need args, see --help" >&2
         return
