@@ -38,7 +38,7 @@ while [ -n "${1:-}" ]; do
             echo  " kill                  Delete a branch."
             echo
             echo  " diff, d               Diff workdir."
-            echo  " cachediff, dc         Diff staging area."
+            echo  " diff-staging, ds, dc  Diff staging area."
             echo  " commit, ci            Commit."
             echo  " uncommit              Undo the last commit, unless you pushed it already. Does not"
             echo  "                       modify your workdir, changes are uncommited but not undone."
@@ -276,18 +276,22 @@ function hgit_d {
     hgit_diff "$@"
 }
 
-function hgit_cachediff {
+function hgit_diff_staging {
     if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
         echo "View differences of the staging area vs the repo."
         echo
-        echo "Usage: hgit cachediff"
+        echo "Usage: hgit diff-staging"
         return
     fi
     git diff --no-prefix --cached
 }
 
 function hgit_dc {
-    hgit_cachediff "$@"
+    hgit_diff_staging "$@"
+}
+
+function hgit_ds {
+    hgit_diff_staging "$@"
 }
 
 # Commit
@@ -299,7 +303,7 @@ function hgit_commit {
         case "$1" in
             -h|--help)
                 echo "Commit changes from the workdir. If no files are given, commits"
-                echo "whatever is currently in the staging area. See \`hgit cachediff\`"
+                echo "whatever is currently in the staging area. See \`hgit diff-staging\`"
                 echo "to check what's in there."
                 echo
                 echo "Usage: hgit commit [-m <commit message>] [files]"
@@ -392,7 +396,7 @@ function hgit_change {
     elif [ -n "$MESSAGE" ]; then
         hgit_commit -m "$MESSAGE" "${FILES[@]}"
     else
-        hgit_cachediff "${FILES[@]}"
+        hgit_diff_staging "${FILES[@]}"
         hgit_diff "${FILES[@]}"
     fi
 }
@@ -812,7 +816,7 @@ function hgit_add {
         echo
         echo " * You're about to commit a huge change and want to collect the changes"
         echo "   before committing them in a way that you can check as you go using"
-        echo "   \`hgit cachediff\`."
+        echo "   \`hgit diff-staging\`."
         echo
         echo "Reverse conclusion:"
         echo
