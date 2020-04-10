@@ -103,7 +103,3 @@ Then:
 # Config
 
 `hgit` requires a config file in `~/.hgitrc` that defines the name of your GitHub user, after which your remotes will be named.
-
-# State
-
-`hgit` writes some state into `.git/hgitrc`. Let's hope git doesn't care, but knowing git, it probably gives zero fucks.
