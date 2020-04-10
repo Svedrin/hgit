@@ -164,6 +164,20 @@ function hgit_clone () {
     fi
 }
 
+function hgit_checkout {
+    echo "The checkout command wields no power here. You're probably looking for one of these:"
+    echo
+    echo  " branch, b             Create a new branch."
+    echo  " branch-from           Create a new branch from a specific commit or tag."
+    echo  " use                   Switch to an existing branch, even if it only exists in your"
+    echo  "                       fork but not yet locally."
+    echo  " revert, re            Undo your changes and set the file to the latest state in the"
+    echo  "                       repo or staging area."
+}
+
+function hgit_co {
+    hgit_checkout "$@"
+}
 
 # Status
 
