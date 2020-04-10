@@ -87,8 +87,8 @@ This is useful if you're working on the same branch on multiple machines. To clo
 This will:
 
 * `git remote add <other-person> git@github.com:<other-person>/Spoon-Knife.git`
-* `git fetch <other-person> --filter 123`
-* `git checkout <whatever branch matches the filter>`
+* `git fetch <other-person> 123-this-branch-matched`
+* `git checkout 123-this-branch-matched`
 
 Then:
 
