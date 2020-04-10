@@ -58,7 +58,7 @@ while [ -n "${1:-}" ]; do
             echo  " revert, re            Undo your changes and set the file to the latest state in the"
             echo  "                       repo or staging area."
             echo  " ignore                Add a path to .gitignore."
-            echo  " gh-view               View a file on GitHub."
+            echo  " gh                    View a file on GitHub."
             echo
             echo  "See \`$0 <command> --help\` for help on specific commands."
             echo
@@ -822,7 +822,7 @@ function hgit_cat () {
     git show "${ARGS[@]}"
 }
 
-function hgit_gh_view {
+function hgit_gh {
     if [ -z "${1:-}" ]; then
         echo "need args, see --help" >&2
         return
@@ -838,7 +838,7 @@ function hgit_gh_view {
             -h|--help)
                 echo "Dump files in a given revision or HEAD from the repo to stdout."
                 echo
-                echo "Usage: hgit cat [options] <files>"
+                echo "Usage: hgit gh [options] <files>"
                 echo
                 echo "Options:"
                 echo " -h --help             This help text"
