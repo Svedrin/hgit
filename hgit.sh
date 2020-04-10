@@ -760,8 +760,72 @@ function hgit_add {
     fi
 }
 
+function hgit_cp {
+    if [ -z "${1:-}" ] || [ -z "${2:-}" ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+        echo "Copy a file or directory and add the destination to the repo."
+        echo
+        echo "Usage: hgit cp <source> <destination>"
+        return
+    fi
+    SOURCE="$1"
+    DEST="$2"
+    if [ -d "$SOURCE" ]; then
+        DASH_R="-r"
+    fi
+    if [ -d "$DEST" ]; then
+        DEST="$DEST/$(basename "$SOURCE")"
+    fi
+    cp -p ${DASH_R:-} "$SOURCE" "$DEST"
+    git add -- "$DEST"
+}
+
+function hgit_mv {
+    if [ -z "${1:-}" ] || [ -z "${2:-}" ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+        echo "Move or rename a file or directory."
+        echo
+        echo "Usage: hgit mv [-A|--already] <source> <destination>"
+        echo
+        echo "Specify -A or --already if you moved it already and now"
+        echo "want to record that move in the repo."
+        echo
+        echo "Unlike \`mv\` or \`git mv\`, supports only a single"
+        echo "<source> argument."
+        return
+    fi
+    SOURCE="$1"
+    DEST="$2"
+    if [ "${1:-}" = "-A" ] || [ "${1:-}" = "--already" ]; then
+        # Undo the move first, so that we can then re-do it using "git mv".
+        if [ -e "$SOURCE" ]; then
+            echo "$SOURCE still exists. Not sure what that means, thus we'll abort."
+            return 1
+        fi
+        if [ -d "$DEST" ]; then
+            # $SOURCE now probably exists as "$DEST/$(basename "$SOURCE")".
+            MAYBE_DEST="$DEST/$(basename "$SOURCE")"
+            if [ -e "$MAYBE_DEST" ]; then
+                mv "$MAYBE_DEST" "$SOURCE"
+            else
+                mv "$DEST" "$SOURCE"
+            fi
+        else
+            mv "$DEST" "$SOURCE"
+        fi
+    fi
+    git mv "$SOURCE" "$DEST"
+}
+
 function hgit_rm {
-    git rm -- "$@"
+    if [ -z "${1:-}" ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+        echo "Delete files from the repo."
+        echo
+        echo "Usage: hgit rm <path>"
+        return
+    fi
+    if [ -d "$1" ]; then
+        DASH_R="-r"
+    fi
+    git rm ${DASH_R:-} -- "$@"
 }
 
 function hgit_ignore {
