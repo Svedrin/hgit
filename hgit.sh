@@ -47,7 +47,7 @@ while [ -n "${1:-}" ]; do
             echo  " amend                 Amend stuff to the last commit, unless you pushed it already."
             echo  " push                  Push changes to a fork or upstream."
             echo  " pull                  Pull changes from a fork or upstream."
-            echo  " gh-pr, pr             Open a Pull Request."
+            echo  " pr                    Open a Pull Request."
             echo
             echo  " add                   Add a file to the repo, or add its changes to the staging area."
             echo  " cp                    Copy src to dest, then add dest to git."
@@ -670,7 +670,7 @@ function hgit_log {
     fi
 }
 
-function hgit_gh_pr {
+function hgit_pr {
     DRY_RUN="false"
     if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
         echo "Open the web browser to create a GitHub PR from the current branch."
@@ -693,7 +693,7 @@ function hgit_gh_pr {
     CURR_BRANCH="$(hgit_branch)"
     if [ "$CURR_BRANCH" = "master" ]; then
         echo "Creating a PR from master is not practical, create a branch first"
-        echo "(try: hgit branch <some branch name>; hgit push; hgit pr)"
+        echo "(try: \`hgit branch <some branch name>; hgit push; hgit pr\`)"
         return
     fi
 
@@ -730,10 +730,6 @@ function hgit_gh_pr {
     else
         x-www-browser "$URL"
     fi
-}
-
-function hgit_pr {
-    hgit_gh_pr "$@"
 }
 
 # File ops
