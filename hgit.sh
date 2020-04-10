@@ -3,6 +3,12 @@
 set -e
 set -u
 
+if [ ! -f ~/.hgitrc ]; then
+    echo "Please create ~/.hgitrc to configure your GitHub username:"
+    echo 'echo MY_GITHUB_USER="your username here" > ~/.hgitrc"'
+    exit 2
+fi
+
 . ~/.hgitrc
 
 COMMAND=""
