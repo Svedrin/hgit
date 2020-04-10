@@ -59,7 +59,7 @@ while [ -n "${1:-}" ]; do
             echo  " revert, re            Undo your changes and set the file to the latest state in the"
             echo  "                       repo or staging area."
             echo  " ignore                Add a path to .gitignore."
-            echo  " gh                    View a file on GitHub."
+            echo  " gh                    View files on GitHub."
             echo
             echo  "See \`$0 <command> --help\` for help on specific commands."
             echo
@@ -623,15 +623,15 @@ function hgit_pull {
         REMOTE="$1"
         BRANCH="$CURR_BRANCH"
     elif [ "$CURR_BRANCH" = "master" ]; then
-        # One arg == "master"
+        # No args, on master
         REMOTE="origin"
         BRANCH="master"
     elif hgit_have_fork; then
-        # No args, and we have a fork
+        # No args, not on master, and we have a fork
         REMOTE="$(hgit_my_fork)"
         BRANCH="$CURR_BRANCH"
     else
-        # No args, no fork
+        # No args, not on master, no fork
         REMOTE="origin"
         BRANCH="$CURR_BRANCH"
     fi
@@ -972,7 +972,7 @@ function hgit_gh {
     while [ -n "${1:-}" ]; do
         case "$1" in
             -h|--help)
-                echo "Dump files in a given revision or HEAD from the repo to stdout."
+                echo "View files in a given revision or HEAD on GitHub in your browser."
                 echo
                 echo "Usage: hgit gh [options] <files>"
                 echo
@@ -1020,8 +1020,6 @@ function hgit_gh {
         fi
     done
 }
-
-
 
 
 if [ ! -n "$COMMAND" ]; then
