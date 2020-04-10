@@ -32,7 +32,7 @@ while [ -n "${1:-}" ]; do
             echo  " collab-with           Add a remote for collaborating with another GitHub user."
             echo  " branch, b             Create a new branch."
             echo  " branch-from           Create a new branch from a specific commit or tag."
-            echo  " branches              List existing branches."
+            echo  " branches              List existing branches, either local ones or those in a remote."
             echo  " use                   Switch to an existing branch, even if it only exists in your"
             echo  "                       fork but not yet locally."
             echo  " kill                  Delete a branch."
@@ -462,7 +462,18 @@ function hgit_tag {
 # Branches
 
 function hgit_branches {
-    git branch -l
+    if [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+        echo "List existing branches, either local ones or those in a remote."
+        echo
+        echo "Usage: hgit branches [-h|--help] [<remote>]"
+        return
+    fi
+    REMOTE="${1:-}"
+    if [ -n "$REMOTE" ]; then
+        git ls-remote --heads "$REMOTE" | cut -d/ -f3
+    else
+        git branch -l
+    fi
 }
 
 function hgit_use {
