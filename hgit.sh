@@ -132,7 +132,7 @@ function hgit_init {
 }
 
 function hgit_clone {
-    if [ -z "${1:-}" ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+    if [ -z "${1:-}" ] || [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
         echo "Clone an existing repo, and if it's from GitHub and you"
         echo "have a fork, clone that too."
         echo
@@ -174,7 +174,7 @@ function hgit_clone {
 }
 
 function hgit_collab_with {
-    if [ -z "${1:-}" ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+    if [ -z "${1:-}" ] || [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
         echo "Set up the repo so we can collaborate with another GitHub user."
         echo
         echo "Usage: hgit collab-with [-h|--help] <GitHub user>"
@@ -448,7 +448,7 @@ function hgit_uncommit {
 }
 
 function hgit_tag {
-    if [ -z "${1:-}" ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+    if [ -z "${1:-}" ] || [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
         echo "Create a tag and push it to origin."
         echo
         echo "Usage: hgit tag [-h|--help] <tag> [<commit>]"
@@ -481,7 +481,7 @@ function hgit_branches {
 }
 
 function hgit_use {
-    if [ -z "${1:-}" ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+    if [ -z "${1:-}" ] || [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
         echo "Find and switch to an existing branch."
         echo
         echo "Usage: hgit use [-h|--help] [<remote>] <search term>"
@@ -571,7 +571,7 @@ function hgit_b {
 }
 
 function hgit_branch_from {
-    if [ -z "${1:-}" ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+    if [ -z "${1:-}" ] || [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
         echo "Create a branch that starts at a given commit or tag and switch to it."
         echo
         echo "Usage: hgit branch-from [-h|--help] <branch name> <commit or tag>"
@@ -582,7 +582,7 @@ function hgit_branch_from {
 }
 
 function hgit_kill {
-    if [ -z "${1:-}" ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+    if [ -z "${1:-}" ] || [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
         echo "Delete a branch."
         echo
         echo "Usage: hgit kill [-h|--help] <branch name>"
@@ -777,7 +777,7 @@ function hgit_pr {
 # File ops
 
 function hgit_forget {
-    if [ -z "${1:-}" ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+    if [ -z "${1:-}" ] || [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
         echo "Forget about changes we added to the staging area."
         echo
         echo "Usage: hgit forget [-h|--help] <files>"
@@ -787,7 +787,7 @@ function hgit_forget {
 }
 
 function hgit_revert {
-    if [ -z "${1:-}" ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+    if [ -z "${1:-}" ] || [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
         echo "Revert a file in the workdir to whatever is in the repo."
         echo
         echo "Usage: hgit revert [-h|--help] <files>"
@@ -801,7 +801,7 @@ function hgit_re {
 }
 
 function hgit_add {
-    if [ -z "${1:-}" ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+    if [ -z "${1:-}" ] || [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
         echo "Add files to the staging area, to be picked up by the next commit."
         echo
         echo "Usage: hgit add [-h|--help] [-p|--patch] <files>"
@@ -833,7 +833,7 @@ function hgit_add {
 }
 
 function hgit_cp {
-    if [ -z "${1:-}" ] || [ -z "${2:-}" ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+    if [ -z "${1:-}" ] || [ -z "${2:-}" ] || [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
         echo "Copy a file or directory and add the destination to the repo."
         echo
         echo "Usage: hgit cp <source> <destination>"
@@ -852,7 +852,7 @@ function hgit_cp {
 }
 
 function hgit_mv {
-    if [ -z "${1:-}" ] || [ -z "${2:-}" ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+    if [ -z "${1:-}" ] || [ -z "${2:-}" ] || [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
         echo "Move or rename a file or directory."
         echo
         echo "Usage: hgit mv [-A|--already] <source> <destination>"
@@ -888,7 +888,7 @@ function hgit_mv {
 }
 
 function hgit_rm {
-    if [ -z "${1:-}" ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+    if [ -z "${1:-}" ] || [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
         echo "Delete files from the repo."
         echo
         echo "Usage: hgit rm <path>"
@@ -901,7 +901,7 @@ function hgit_rm {
 }
 
 function hgit_ignore {
-    if [ -z "${1:-}" ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+    if [ -z "${1:-}" ] || [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
         echo "Add paths to the .gitignore file and commit it."
         echo
         echo "Usage: hgit ignore [-h|--help] <files>"
