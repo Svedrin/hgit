@@ -41,6 +41,8 @@ while [ -n "${1:-}" ]; do
             echo  " diff, d               Diff workdir."
             echo  " cachediff, dc         Diff staging area."
             echo  " commit, ci            Commit."
+            echo  " uncommit              Undo the last commit, unless you pushed it already. Does not"
+            echo  "                       modify your workdir, changes are uncommited but not undone."
             echo  " change, c             Diff-or-commit (see its --help)."
             echo  " log                   Show logs."
             echo  " tag                   Create a tag and push it upstream."
@@ -101,6 +103,14 @@ function hgit_remote_for_branch () {
             break
         fi
     done
+}
+
+function hgit_last_commit_not_yet_pushed {
+    CURR_BRANCH="$(hgit_branch)"
+    REMOTE="$(hgit_remote_for_branch "$CURR_BRANCH")"
+    LAST_COMMIT="$(git log --format="%H" -n 1)"
+    git rev-list --left-right "$CURR_BRANCH"..."$REMOTE"/"$CURR_BRANCH" | \
+        grep -q "^<$LAST_COMMIT$"
 }
 
 # Init, clone
@@ -330,6 +340,48 @@ function hgit_change () {
 
 function hgit_c {
     hgit_change "$@"
+}
+
+function hgit_amend {
+    if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
+        echo "Amend changes to the last commit."
+        echo
+        echo "Usage: hgit amend <files...>"
+        echo
+        echo "Most useful when you forgot to include something."
+        return
+    fi
+    if hgit_last_commit_not_yet_pushed; then
+        git commit --amend -- "$@"
+    else
+        echo "Sorry, you pushed that commit already, so others know about"
+        echo "it. Changing it now is not a good idea anymore. Please just"
+        echo "create another regular commit."
+    fi
+}
+
+function hgit_uncommit {
+    if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
+        echo "Undo the last commit, unless you pushed it already."
+        echo
+        echo "Usage: hgit uncommit"
+        echo
+        echo "This does not modify your work directory: The changes are"
+        echo "uncommited but not undone. If you want to also have them"
+        echo "undone, follow this command with \`hgit revert\`."
+        return
+    fi
+    if hgit_last_commit_not_yet_pushed; then
+        git reset "HEAD~"
+    else
+        echo "Sorry, you pushed that commit already, so others know about"
+        echo "it. Pretending it never happened is not a good idea anymore."
+        echo
+        echo "There's no obvious best solution to this situation: You can"
+        echo "try to use \`git revert --no-commit\` though to put your"
+        echo "workdir in a state with those changes reversed, and then"
+        echo "commit that state of the workdir."
+    fi
 }
 
 function hgit_tag {
