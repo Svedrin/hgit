@@ -828,7 +828,7 @@ function hgit_gh {
         return
     fi
 
-    COMMIT="HEAD"
+    COMMIT="$(git log --format="%H" -n 1)" # last commit in current branch
     DRY_RUN="false"
     REMOTE="$(hgit_remote_for_branch "$(hgit_branch)")"
     FILES=()
