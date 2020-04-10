@@ -29,8 +29,6 @@ while [ -n "${1:-}" ]; do
             echo
             echo  " init                  Initialize a new git repo in a directory."
             echo  " clone                 Clone a remote repo, plus your fork if you have one."
-            echo  " gh-create             Create a new repo in GitHub and run '$0 gh-fork' on it."
-            echo  " gh-fork               Clone a remote repo, plus create a fork if you do NOT have one."
             echo  " branch, b             Create a new branch."
             echo  " branch-from           Create a new branch from a specific commit or tag."
             echo  " branches              List existing branches."
