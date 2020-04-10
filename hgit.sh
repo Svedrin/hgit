@@ -466,7 +466,7 @@ function hgit_tag {
 # Branches
 
 function hgit_branches {
-    if [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+    if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
         echo "List existing branches, either local ones or those in a remote."
         echo
         echo "Usage: hgit branches [-h|--help] [<remote>]"
