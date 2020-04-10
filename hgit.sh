@@ -32,9 +32,11 @@ while [ -n "${1:-}" ]; do
             echo  " gh-create             Create a new repo in GitHub and run '$0 gh-fork' on it."
             echo  " gh-fork               Clone a remote repo, plus create a fork if you do NOT have one."
             echo  " branch, b             Create a new branch."
+            echo  " branch-from           Create a new branch from a specific commit or tag."
             echo  " branches              List existing branches."
             echo  " use                   Switch to an existing branch, even if it only exists in your"
             echo  "                       fork but not yet locally."
+            echo  " kill                  Delete a branch."
             echo
             echo  " diff, d               Diff workdir."
             echo  " cachediff, dc         Diff staging area."
@@ -57,6 +59,8 @@ while [ -n "${1:-}" ]; do
             echo  "                       repo or staging area."
             echo  " ignore                Add a path to .gitignore."
             echo  " gh-view               View a file on GitHub."
+            echo
+            echo  "See \`$0 <command> --help\` for help on specific commands."
             echo
             exit 0
             ;;
@@ -294,6 +298,22 @@ function hgit_c {
     hgit_change "$@"
 }
 
+function hgit_tag {
+    if [ -z "${1:-}" ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+        echo "Create a tag and push it to origin."
+        echo
+        echo "Usage: hgit tag [-h|--help] <tag> [<commit>]"
+        return
+    fi
+    if [ -z "${2:-}" ]; then
+        git tag -a "$1"
+    else
+        git tag -a "$1" "$2"
+    fi
+    git push origin "$1"
+}
+
+
 # Branches
 
 function hgit_branches {
@@ -390,6 +410,27 @@ function hgit_b {
     hgit_branch "$@"
 }
 
+function hgit_branch_from {
+    if [ -z "${1:-}" ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+        echo "Create a branch that starts at a given commit or tag and switch to it."
+        echo
+        echo "Usage: hgit branch-from [-h|--help] <branch name> <commit or tag>"
+        return
+    fi
+    git branch "$1" "$2"
+    hgit_use "$1"
+}
+
+function hgit_kill () {
+    if [ -z "${1:-}" ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+        echo "Delete a branch."
+        echo
+        echo "Usage: hgit kill [-h|--help] <branch name>"
+        return
+    fi
+    hgit_use "master"
+    git branch -D "$1"
+}
 
 # Push/pull
 
