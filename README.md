@@ -8,7 +8,7 @@ Opinionated micro-porcelain for git. Assumes that you're working with GitHub, bu
 
 * `hgit branch` implies `git checkout` of that newly-created branch. `hgit checkout` cannot create branches.
 * `hgit change` doesn't exist in git, and combines `diff` and `commit` into a single command because I use them interchangeably.
-* `hgit diff` has a -c option that lets you view an existing commit as a diff.
+* `hgit diff` has a `-c` option that lets you view an existing commit as a diff.
 * `hgit commit` does not have `-a` because I find it confusing: "wait, does that also add stuff?".
 * `hgit use` and `hgit forget` don't exist in git, but I wish they did.
 * no rebase. (See below.)
