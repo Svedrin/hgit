@@ -912,11 +912,15 @@ function hgit_ignore {
     fi
     REPO_ROOT="$(git rev-parse --show-toplevel)"
     while [ -n "${1:-}" ]; do
+        GITIGNORE_EXISTED="$([ -e "$REPO_ROOT/.gitignore" ] && echo true || echo false)"
         IGNORE_PATH="$(realpath --relative-to="$REPO_ROOT" "$1")"
         if [ -d "$1" ]; then
             IGNORE_PATH="${IGNORE_PATH}/"
         fi
         echo "$IGNORE_PATH" >> "$REPO_ROOT/.gitignore"
+        if [ "$GITIGNORE_EXISTED" = "false" ]; then
+            hgit_add "$REPO_ROOT/.gitignore"
+        fi
         hgit_commit "$REPO_ROOT/.gitignore" -m "gitignore $1"
         shift
     done
