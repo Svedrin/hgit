@@ -12,6 +12,7 @@ fi
 . ~/.hgitrc
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
+MASTER_BRANCH="master"
 
 if [ -e "$REPO_ROOT/.git/hgitrc" ]; then
     . "$REPO_ROOT/.git/hgitrc"
@@ -496,13 +497,19 @@ function hgit_use {
         echo
         echo "Usage: hgit use [-h|--help] [<remote>] <search term>"
         echo
-        echo "If switching to 'master' and a fork exists, an implicit"
+        echo "If switching to '$MASTER_BRANCH' and a fork exists, an implicit"
         echo "sync is performed to remove local branches that have been"
         echo "deleted in the fork (e.g. after a PR is merged)."
         return
     fi
-    if [ "$1" = "master" ] && [ -z "${2:-}" ]; then
-        git checkout master
+    if [ "$MASTER_BRANCH" != "master" ] && [ "$1" = "master" ]; then
+        echo "In this repo, master is called $MASTER_BRANCH."
+        echo "Please switch to that instead. If you really do"
+        echo "want to switch to master, use git checkout master."
+        return
+    fi
+    if [ "$1" = "$MASTER_BRANCH" ] && [ -z "${2:-}" ]; then
+        git checkout "$MASTER_BRANCH"
         # If we have a fork of this repo, prune branches that no longer exist in it
         if hgit_have_fork; then
             git fetch -p $(hgit_my_fork)
@@ -598,7 +605,7 @@ function hgit_kill {
         echo "Usage: hgit kill [-h|--help] <branch name>"
         return
     fi
-    hgit_use "master"
+    hgit_use "$MASTER_BRANCH"
     git branch -D "$1"
 }
 
@@ -608,14 +615,14 @@ function hgit_pull {
     if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
         echo "Pull changes from a remote."
         echo
-        echo "Usage: hgit pull [-h|--help] [<remote> [<branch>]|master]"
+        echo "Usage: hgit pull [-h|--help] [<remote> [<branch>]|$MASTER_BRANCH]"
         echo
         echo "If remote and branch are both specified, we'll pull that branch from that remote."
         echo "If just a remote is given, we'll pull the current branch from that remote."
-        echo "If just the word 'master' is given, we'll pull origin master."
-        echo "If nothing is given and we're on master, we'll pull origin master."
-        echo "If nothing is given and we're not on master and we have a fork, we'll pull the current branch from there."
-        echo "If nothing is given and we're not on master and we do not have a fork, we'll pull the current branch from origin."
+        echo "If just the word '$MASTER_BRANCH' is given, we'll pull origin $MASTER_BRANCH"
+        echo "If nothing is given and we're on $MASTER_BRANCH, we'll pull origin $MASTER_BRANCH"
+        echo "If nothing is given and we're not on $MASTER_BRANCH and we have a fork, we'll pull the current branch from there."
+        echo "If nothing is given and we're not on $MASTER_BRANCH and we do not have a fork, we'll pull the current branch from origin."
         return
     fi
     CURR_BRANCH="$(hgit_branch)"
@@ -624,18 +631,18 @@ function hgit_pull {
         # Two args: remote and branch
         REMOTE="$1"
         BRANCH="$2"
-    elif [ "${1:-}" = "master" ]; then
-        # One arg == "master"
+    elif [ "${1:-}" = "$MASTER_BRANCH" ]; then
+        # One arg == master
         REMOTE="origin"
-        BRANCH="master"
+        BRANCH="$MASTER_BRANCH"
     elif [ -n "${1:-}" ]; then
         # One arg: Remote
         REMOTE="$1"
         BRANCH="$CURR_BRANCH"
-    elif [ "$CURR_BRANCH" = "master" ]; then
+    elif [ "$CURR_BRANCH" = "$MASTER_BRANCH" ]; then
         # No args, on master
         REMOTE="origin"
-        BRANCH="master"
+        BRANCH="$MASTER_BRANCH"
     elif hgit_have_fork; then
         # No args, not on master, and we have a fork
         REMOTE="$(hgit_my_fork)"
@@ -655,9 +662,9 @@ function hgit_push {
         echo "Usage: hgit push [-h|--help] [<remote>]"
         echo
         echo "If remote is specified, we'll push the current branch there."
-        echo "If remote is not specified and we're on master, we'll push to origin master."
-        echo "If remote is not specified and we're not on master and we have a fork, we'll push to the fork."
-        echo "If remote is not specified and we're not on master and we do not have a fork, we'll push to origin."
+        echo "If remote is not specified and we're on $MASTER_BRANCH, we'll push to origin $MASTER_BRANCH."
+        echo "If remote is not specified and we're not on $MASTER_BRANCH and we have a fork, we'll push to the fork."
+        echo "If remote is not specified and we're not on $MASTER_BRANCH and we do not have a fork, we'll push to origin."
         return
     fi
     CURR_BRANCH="$(hgit_branch)"
@@ -669,8 +676,8 @@ function hgit_push {
     # Now push
     if [ -n "${1:-}" ]; then
         git push $SET_UPSTREAM "$1" "$CURR_BRANCH"
-    elif [ "$CURR_BRANCH" = "master" ]; then
-        git push $SET_UPSTREAM "origin" "master"
+    elif [ "$CURR_BRANCH" = "$MASTER_BRANCH" ]; then
+        git push $SET_UPSTREAM "origin" "$MASTER_BRANCH"
     elif hgit_have_fork; then
         git push $SET_UPSTREAM "$(hgit_my_fork)" "$CURR_BRANCH"
     else
@@ -729,7 +736,7 @@ function hgit_pr {
         echo
         echo "Usage: hgit pr [-h|--help|-d|--dry-run] [<target branch>]"
         echo
-        echo "Target branch defaults to master."
+        echo "Target branch defaults to $MASTER_BRANCH."
         echo
         echo "Options:"
         echo " -h --help             This help text"
@@ -740,11 +747,11 @@ function hgit_pr {
         DRY_RUN="true"
     fi
 
-    TARGET_BRANCH="${2:-master}"
+    TARGET_BRANCH="${2:-$MASTER_BRANCH}"
 
     CURR_BRANCH="$(hgit_branch)"
-    if [ "$CURR_BRANCH" = "master" ]; then
-        echo "Creating a PR from master is not practical, create a branch first"
+    if [ "$CURR_BRANCH" = "$MASTER_BRANCH" ]; then
+        echo "Creating a PR from $MASTER_BRANCH is not practical, create a branch first"
         echo "(try: \`hgit branch <some branch name>; hgit push; hgit pr\`)"
         return
     fi
@@ -993,7 +1000,7 @@ function hgit_gh {
                 echo " -h --help             This help text"
                 echo " -c --commit           Use the given commit rather than HEAD."
                 echo " -d --dry-run          Only print the URLs, do not open the browser."
-                echo " -o --origin           Always show origin, even if we're on a branch other than master."
+                echo " -o --origin           Always show origin, even if we're on a branch other than $MASTER_BRANCH."
                 return
                 ;;
             -c|--commit)
