@@ -107,6 +107,10 @@ function hgit_remote_for_branch {
 function hgit_last_commit_not_yet_pushed {
     CURR_BRANCH="$(hgit_branch)"
     REMOTE="$(hgit_remote_for_branch "$CURR_BRANCH")"
+    if [ -z "$REMOTE" ]; then
+        # if the branch doesn't even _have_ a remote, we probably haven't pushed
+        return 0
+    fi
     LAST_COMMIT="$(git log --format="%H" -n 1)"
     git rev-list --left-right "$CURR_BRANCH"..."$REMOTE"/"$CURR_BRANCH" | \
         grep -q "^<$LAST_COMMIT$"
