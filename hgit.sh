@@ -11,6 +11,12 @@ fi
 
 . ~/.hgitrc
 
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+
+if [ -e "$REPO_ROOT/.git/hgitrc" ]; then
+    . "$REPO_ROOT/.git/hgitrc"
+fi
+
 COMMAND=""
 
 while [ -n "${1:-}" ]; do
@@ -914,7 +920,6 @@ function hgit_ignore {
         echo "specify them - don't worry about syntax, just fire away :)"
         return
     fi
-    REPO_ROOT="$(git rev-parse --show-toplevel)"
     while [ -n "${1:-}" ]; do
         GITIGNORE_EXISTED="$([ -e "$REPO_ROOT/.gitignore" ] && echo true || echo false)"
         IGNORE_PATH="$(realpath --relative-to="$REPO_ROOT" "$1")"
