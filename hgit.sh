@@ -508,14 +508,7 @@ function hgit_use {
         echo "want to switch to master, use git checkout master."
         return
     fi
-    if [ "$1" = "$MASTER_BRANCH" ] && [ -z "${2:-}" ]; then
-        git checkout "$MASTER_BRANCH"
-        # If we have a fork of this repo, prune branches that no longer exist in it
-        if hgit_have_fork; then
-            git fetch -p $(hgit_my_fork)
-        fi
-        return
-    elif [ -z "${2:-}" ]; then
+    if [ -z "${2:-}" ]; then
         # one arg:  123-something
         if hgit_have_fork; then
             REMOTE="$(hgit_my_fork)"
@@ -536,6 +529,12 @@ function hgit_use {
     CANDIDATES=($(git branch -l | cut -c3- | grep "$SEARCH" || true))
     if [ "${#CANDIDATES[*]}" = "1" ]; then
         git checkout "${CANDIDATES[0]}"
+        if [ "${CANDIDATES[0]}" = "$MASTER_BRANCH" ] && hgit_have_fork; then
+            # If we have a fork of this repo, prune branches that no longer
+            # exist in it and pull from master
+            git fetch -p $(hgit_my_fork)
+            git pull
+        fi
     elif [ "${#CANDIDATES[*]}" -gt "1" ]; then
         echo "Found multiple branches, please make your search term more specific:"
         for CAND in "${CANDIDATES[@]}"; do
