@@ -11,7 +11,7 @@ fi
 
 . ~/.hgitrc
 
-REPO_ROOT="$(git rev-parse --show-toplevel)"
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
 MASTER_BRANCH="master"
 
 if [ -e "$REPO_ROOT/.git/hgitrc" ]; then
