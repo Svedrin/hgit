@@ -37,7 +37,7 @@ while [ -n "${1:-}" ]; do
             echo  " init                  Initialize a new git repo in a directory."
             echo  " clone                 Clone a remote repo, plus your fork if you have one."
             echo  " collab-with           Add a remote for collaborating with another GitHub user."
-            echo  " branch, b             Create a new branch."
+            echo  " branch, b, br         Create a new branch."
             echo  " branch-from           Create a new branch from a specific commit or tag."
             echo  " branches              List existing branches, either local ones or those in a remote."
             echo  " use                   Switch to an existing branch, even if it only exists in your"
@@ -583,6 +583,10 @@ function hgit_branch {
 }
 
 function hgit_b {
+    hgit_branch "$@"
+}
+
+function hgit_br {
     hgit_branch "$@"
 }
 
