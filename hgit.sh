@@ -253,6 +253,7 @@ function hgit_st {
 
 function hgit_diff {
     COMMIT=""
+    OPTS=""
     FILES=()
     while [ -n "${1:-}" ]; do
         case "$1" in
@@ -263,12 +264,20 @@ function hgit_diff {
                 echo
                 echo "Options:"
                 echo " -h --help             This help text"
+                echo " -s --staging          Show staged changes rather than those from the workdir."
                 echo " -c --commit           Show changes made in a certain commit."
+                echo " -w --no-whitespace    Do not include lines that only change whitespace in the diff."
                 return
                 ;;
             -c|--commit)
                 COMMIT="$2"
                 shift
+                ;;
+            -w|--no-whitespace)
+                OPTS="$OPTS -w"
+                ;;
+            -s|--staging)
+                OPTS="$OPTS --cached"
                 ;;
             *)
                 FILES+=("$1")
@@ -277,9 +286,9 @@ function hgit_diff {
         shift
     done
     if [ -n "$COMMIT" ]; then
-        git diff --no-prefix "$COMMIT^" "$COMMIT" -- "${FILES[@]}"
+        echo git diff --no-prefix $OPTS "$COMMIT^" "$COMMIT" -- "${FILES[@]}"
     else
-        git diff --no-prefix -- "${FILES[@]}"
+        git diff --no-prefix $OPTS -- "${FILES[@]}"
     fi
 }
 
@@ -288,13 +297,7 @@ function hgit_d {
 }
 
 function hgit_diff_staging {
-    if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
-        echo "View differences of the staging area vs the repo."
-        echo
-        echo "Usage: hgit diff-staging"
-        return
-    fi
-    git diff --no-prefix --cached
+    hgit_diff --staging "$@"
 }
 
 function hgit_dc {
