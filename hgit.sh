@@ -748,9 +748,12 @@ function hgit_pr {
         echo "Options:"
         echo " -h --help             This help text"
         echo " -d --dry-run          Only print the URL, do not open the browser."
+        if [ -n "$SSH_CONNECTION" ]; then
+            echo "                       SSH session detected, forcing dry-run."
+        fi
         return
     fi
-    if [ "${1:-}" = "-d" ] || [ "${1:-}" = "--dry-run" ]; then
+    if [ "${1:-}" = "-d" ] || [ "${1:-}" = "--dry-run" ] || [ -n "$SSH_CONNECTION" ]; then
         DRY_RUN="true"
     fi
 
@@ -1007,6 +1010,9 @@ function hgit_gh {
                 echo " -h --help             This help text"
                 echo " -c --commit           Use the given commit rather than HEAD."
                 echo " -d --dry-run          Only print the URLs, do not open the browser."
+                if [ -n "$SSH_CONNECTION" ]; then
+                    echo "                       SSH session detected, forcing dry-run."
+                fi
                 echo " -o --origin           Always show origin, even if we're on a branch other than $MASTER_BRANCH."
                 return
                 ;;
@@ -1026,6 +1032,10 @@ function hgit_gh {
         esac
         shift
     done
+
+    if [ -n "$SSH_CONNECTION" ]; then
+        DRY_RUN="true"
+    fi
 
     REMOTE_URL="$(git remote get-url "$REMOTE")"
     # See if this even is a GitHub repo at all
