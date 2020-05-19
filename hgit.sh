@@ -575,7 +575,8 @@ function hgit_branch {
         return
     elif [ -z "${1:-}" ]; then
         # No branch name given -> show current branch
-        git branch --show-current
+        # "git branch --show-current" would do this, but requires recent git
+        git branch | cut -c 3-
     elif git branch -l | cut -c3- | grep -q "^$1$"; then
         # Branch exists already, switch to it
         hgit_use "$1"
