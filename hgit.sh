@@ -748,12 +748,12 @@ function hgit_pr {
         echo "Options:"
         echo " -h --help             This help text"
         echo " -d --dry-run          Only print the URL, do not open the browser."
-        if [ -n "$SSH_CONNECTION" ]; then
+        if [ -n "${SSH_CONNECTION:-}" ]; then
             echo "                       SSH session detected, forcing dry-run."
         fi
         return
     fi
-    if [ "${1:-}" = "-d" ] || [ "${1:-}" = "--dry-run" ] || [ -n "$SSH_CONNECTION" ]; then
+    if [ "${1:-}" = "-d" ] || [ "${1:-}" = "--dry-run" ] || [ -n "${SSH_CONNECTION:-}" ]; then
         DRY_RUN="true"
     fi
 
@@ -1010,7 +1010,7 @@ function hgit_gh {
                 echo " -h --help             This help text"
                 echo " -c --commit           Use the given commit rather than HEAD."
                 echo " -d --dry-run          Only print the URLs, do not open the browser."
-                if [ -n "$SSH_CONNECTION" ]; then
+                if [ -n "${SSH_CONNECTION:-}" ]; then
                     echo "                       SSH session detected, forcing dry-run."
                 fi
                 echo " -o --origin           Always show origin, even if we're on a branch other than $MASTER_BRANCH."
@@ -1033,7 +1033,7 @@ function hgit_gh {
         shift
     done
 
-    if [ -n "$SSH_CONNECTION" ]; then
+    if [ -n "${SSH_CONNECTION:-}" ]; then
         DRY_RUN="true"
     fi
 
