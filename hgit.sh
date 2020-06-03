@@ -891,9 +891,9 @@ function hgit_mv {
         echo "<source> argument."
         return
     fi
-    SOURCE="$1"
-    DEST="$2"
     if [ "${1:-}" = "-A" ] || [ "${1:-}" = "--already" ]; then
+        SOURCE="$2"
+        DEST="$3"
         # Undo the move first, so that we can then re-do it using "git mv".
         if [ -e "$SOURCE" ]; then
             echo "$SOURCE still exists. Not sure what that means, thus we'll abort."
@@ -910,6 +910,9 @@ function hgit_mv {
         else
             mv "$DEST" "$SOURCE"
         fi
+    else
+        SOURCE="$1"
+        DEST="$2"
     fi
     git mv "$SOURCE" "$DEST"
 }
