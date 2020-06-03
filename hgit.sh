@@ -789,7 +789,7 @@ function hgit_pr {
         REMOTE_OWNER="$(cut -d/ -f1 <<<"$REMOTE_OWNER_AND_REPO")"
         COMPARE_TO="$REMOTE_OWNER:$CURR_BRANCH"
     else
-        COMPARE_TO="$CURRENT_BRANCH"
+        COMPARE_TO="$CURR_BRANCH"
     fi
 
     URL="https://github.com/${ORIGIN_OWNER}/${ORIGIN_REPO}/compare/${TARGET_BRANCH}...${COMPARE_TO}"
