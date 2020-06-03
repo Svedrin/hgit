@@ -469,9 +469,9 @@ function hgit_tag {
         return
     fi
     if [ -z "${2:-}" ]; then
-        git tag -a "$1"
+        git tag -a "$1" -m "tag $1"
     else
-        git tag -a "$1" "$2"
+        git tag -a "$1" -m "tag $1" "$2"
     fi
     git push origin "$1"
 }
