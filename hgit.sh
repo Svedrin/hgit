@@ -672,6 +672,7 @@ function hgit_push {
         echo
         echo "If remote is specified, we'll push the current branch there."
         echo "If remote is not specified and we're on $MASTER_BRANCH, we'll push to origin $MASTER_BRANCH."
+        echo "If remote is not specified and we're not on $MASTER_BRANCH and the current branch is already tracking a remote, we'll push there."
         echo "If remote is not specified and we're not on $MASTER_BRANCH and we have a fork, we'll push to the fork."
         echo "If remote is not specified and we're not on $MASTER_BRANCH and we do not have a fork, we'll push to origin."
         return
@@ -687,6 +688,8 @@ function hgit_push {
         git push $SET_UPSTREAM "$1" "$CURR_BRANCH"
     elif [ "$CURR_BRANCH" = "$MASTER_BRANCH" ]; then
         git push $SET_UPSTREAM "origin" "$MASTER_BRANCH"
+    elif [ -z "$(hgit_remote_for_branch "$CURR_BRANCH")" ]; then
+        git push
     elif hgit_have_fork; then
         git push $SET_UPSTREAM "$(hgit_my_fork)" "$CURR_BRANCH"
     else
