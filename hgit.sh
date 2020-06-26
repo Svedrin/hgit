@@ -532,10 +532,12 @@ function hgit_use {
     CANDIDATES=($(git branch -l | cut -c3- | grep "$SEARCH" || true))
     if [ "${#CANDIDATES[*]}" = "1" ]; then
         git checkout "${CANDIDATES[0]}"
-        if [ "${CANDIDATES[0]}" = "$MASTER_BRANCH" ] && hgit_have_fork; then
-            # If we have a fork of this repo, prune branches that no longer
-            # exist in it and pull from master
-            git fetch -p $(hgit_my_fork)
+        if [ "${CANDIDATES[0]}" = "$MASTER_BRANCH" ]; then
+            if hgit_have_fork; then
+                # If we have a fork of this repo, prune branches that no longer exist in it
+                git fetch -p $(hgit_my_fork)
+            fi
+            # pull from upstream
             git pull
         fi
     elif [ "${#CANDIDATES[*]}" -gt "1" ]; then
