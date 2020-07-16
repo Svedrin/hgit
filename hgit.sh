@@ -286,7 +286,7 @@ function hgit_diff {
         shift
     done
     if [ -n "$COMMIT" ]; then
-        echo git diff --no-prefix $OPTS "$COMMIT^" "$COMMIT" -- "${FILES[@]}"
+        git diff --no-prefix $OPTS "$COMMIT^" "$COMMIT" -- "${FILES[@]}"
     else
         git diff --no-prefix $OPTS -- "${FILES[@]}"
     fi
