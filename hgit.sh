@@ -688,7 +688,7 @@ function hgit_push {
         git push $SET_UPSTREAM "$1" "$CURR_BRANCH"
     elif [ "$CURR_BRANCH" = "$MASTER_BRANCH" ]; then
         if hgit_have_fork ; then
-            echo "You have a fork and you're pushing to master. You probably don't want to do that, aborting."
+            echo "You have a fork and you're pushing to $MASTER_BRANCH. You probably don't want to do that, aborting."
             echo "If you do want to do this, run $0 push origin."
         else
             git push $SET_UPSTREAM "origin" "$MASTER_BRANCH"
