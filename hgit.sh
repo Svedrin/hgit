@@ -678,10 +678,6 @@ function hgit_push {
         return
     fi
     CURR_BRANCH="$(hgit_branch)"
-    if hgit_have_fork && [ "$CURR_BRANCH" = "$MASTER_BRANCH" ]; then
-        echo "You have a fork and you're pushing to master. You probably don't want to do that, aborting."
-        exit 1
-    fi
     # To see if we need to --set-upstream, find out which remote the current branch is tracking
     SET_UPSTREAM=""
     if [ -z "$(hgit_remote_for_branch "$CURR_BRANCH")" ]; then
@@ -691,7 +687,12 @@ function hgit_push {
     if [ -n "${1:-}" ]; then
         git push $SET_UPSTREAM "$1" "$CURR_BRANCH"
     elif [ "$CURR_BRANCH" = "$MASTER_BRANCH" ]; then
-        git push $SET_UPSTREAM "origin" "$MASTER_BRANCH"
+        if hgit_have_fork ; then
+            echo "You have a fork and you're pushing to master. You probably don't want to do that, aborting."
+            echo "If you do want to do this, run $0 push origin."
+        else
+            git push $SET_UPSTREAM "origin" "$MASTER_BRANCH"
+        fi
     elif [ -n "$(hgit_remote_for_branch "$CURR_BRANCH")" ]; then
         git push
     elif hgit_have_fork; then
