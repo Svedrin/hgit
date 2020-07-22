@@ -341,7 +341,9 @@ function hgit_commit {
         esac
         shift
     done
-    if [ -n "$MESSAGE" ]; then
+    if hgit_have_fork && [ "$(hgit_branch)" = "$MASTER_BRANCH" ]; then
+        echo "You have a fork and you're commiting to $MASTER_BRANCH. You probably don't want to do that, aborting."
+    elif [ -n "$MESSAGE" ]; then
         git commit -m "$MESSAGE" -- "${FILES[@]}"
     else
         git commit -- "${FILES[@]}"
