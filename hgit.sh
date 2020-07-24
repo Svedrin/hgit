@@ -52,6 +52,7 @@ while [ -n "${1:-}" ]; do
             echo  " change, c             Diff-or-commit (see its --help)."
             echo  " log                   Show logs."
             echo  " tag                   Create a tag and push it upstream."
+            echo  " tags                  List existing tags."
             echo  " amend                 Amend stuff to the last commit, unless you pushed it already."
             echo  " push                  Push changes to a fork or upstream."
             echo  " pull                  Pull changes from a fork or upstream."
@@ -476,6 +477,10 @@ function hgit_tag {
         git tag -a "$1" -m "tag $1" "$2"
     fi
     git push origin "$1"
+}
+
+function hgit_tags {
+    git tag -n
 }
 
 
