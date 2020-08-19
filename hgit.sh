@@ -39,7 +39,7 @@ while [ -n "${1:-}" ]; do
             echo  " collab-with           Add a remote for collaborating with another GitHub user."
             echo  " branch, b, br         Create a new branch."
             echo  " branch-from           Create a new branch from a specific commit or tag."
-            echo  " branches              List existing branches, either local ones or those in a remote."
+            echo  " branches, bs          List existing branches, either local ones or those in a remote."
             echo  " use                   Switch to an existing branch, even if it only exists in your"
             echo  "                       fork but not yet locally."
             echo  " kill                  Delete a branch."
@@ -499,6 +499,10 @@ function hgit_branches {
     else
         git branch -l
     fi
+}
+
+function hgit_bs {
+    hgit_branches "$@"
 }
 
 function hgit_use {
