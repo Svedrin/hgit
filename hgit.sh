@@ -594,7 +594,12 @@ function hgit_branch {
         # Branch exists already, switch to it
         hgit_use "$1"
     else
-        # Branch does not exist, create it
+        # Branch does not exist, create it - but make sure we're on master first
+        if [ "$(git branch | grep '^* ' | cut -c 3-)" != "$MASTER_BRANCH" ]; then
+            echo "You're creating a branch while you're not on $MASTER_BRANCH. You probably don't want to do that, aborting."
+            echo "If you do want to do this, run git checkout -b $1."
+            exit 1
+        fi
         git checkout -b "$1"
     fi
 }
