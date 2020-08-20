@@ -721,6 +721,10 @@ function hgit_puhs {
     hgit_push "$@"
 }
 
+function hgit_spuh {
+    hgit_push "$@"
+}
+
 # Log
 
 function hgit_log {
