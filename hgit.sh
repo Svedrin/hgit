@@ -539,6 +539,17 @@ function hgit_use {
         fi
         SEARCH="$2"
     fi
+    # Are we explicitly checking out master?
+    if [ "$SEARCH" = "$MASTER_BRANCH" ]; then
+        git checkout "$MASTER_BRANCH"
+        if hgit_have_fork; then
+            # If we have a fork of this repo, prune branches that no longer exist in it
+            git fetch -p $(hgit_my_fork)
+        fi
+        # pull from upstream
+        git pull
+        return
+    fi
     # Try to find the branch locally.
     CANDIDATES=($(git branch -l | cut -c3- | grep "$SEARCH" || true))
     if [ "${#CANDIDATES[*]}" = "1" ]; then
