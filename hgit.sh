@@ -177,9 +177,17 @@ function hgit_clone {
         return
     fi
 
+    cd "$INTO"
+
+    # See if master has been renamed in this repo, and if so,
+    # generate a .git/hgitrc file to reflect that
+    CURR_BRANCH="$(hgit_branch)"
+    if [ "$CURR_BRANCH" != "master" ]; then
+        printf 'MASTER_BRANCH="%s"\n' "$CURR_BRANCH" > .git/hgitrc
+    fi
+
     MY_REMOTE_URL="git@github.com:$(hgit_my_fork)/${REPO}.git"
     if git ls-remote --heads "$MY_REMOTE_URL" &>/dev/null; then
-        cd "$INTO"
         git remote add "$(hgit_my_fork)" "$MY_REMOTE_URL"
         git fetch "$(hgit_my_fork)"
     fi
