@@ -561,14 +561,10 @@ function hgit_use {
     # Try to find the branch locally.
     CANDIDATES=($(git branch -l | cut -c3- | grep "$SEARCH" || true))
     if [ "${#CANDIDATES[*]}" = "1" ]; then
-        git checkout "${CANDIDATES[0]}"
         if [ "${CANDIDATES[0]}" = "$MASTER_BRANCH" ]; then
-            if hgit_have_fork; then
-                # If we have a fork of this repo, prune branches that no longer exist in it
-                git fetch -p $(hgit_my_fork)
-            fi
-            # pull from upstream
-            git pull
+            hgit_use "$MASTER_BRANCH"
+        else
+            git checkout "${CANDIDATES[0]}"
         fi
     elif [ "${#CANDIDATES[*]}" -gt "1" ]; then
         echo "Found multiple branches, please make your search term more specific:"
