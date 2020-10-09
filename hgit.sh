@@ -553,15 +553,15 @@ function hgit_use {
         if hgit_have_fork; then
             # If we have a fork of this repo, prune branches that no longer exist in it
             git fetch -p $(hgit_my_fork)
-            # Prune merged branches locally so that they are removed from git config
-            for branch in $(git branch --merged "$MASTER_BRANCH" | cut -c 3-); do
-                if [ "$branch" != "$MASTER_BRANCH" ]; then
-                    git branch -d "$branch"
-                fi
-            done
         fi
         # pull from upstream
         git pull
+        # Prune merged branches locally so that they are removed from git config
+        for branch in $(git branch --merged "$MASTER_BRANCH" | cut -c 3-); do
+            if [ "$branch" != "$MASTER_BRANCH" ]; then
+                git branch -d "$branch"
+            fi
+        done
         return
     fi
     # Try to find the branch locally.
