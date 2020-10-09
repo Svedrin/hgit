@@ -554,7 +554,7 @@ function hgit_use {
             # If we have a fork of this repo, prune branches that no longer exist in it
             git fetch -p $(hgit_my_fork)
             # Prune merged branches locally so that they are removed from git config
-            for branch in $(git branch --merged "$MASTER_BRANCH"); do
+            for branch in $(git branch --merged "$MASTER_BRANCH" | cut -c 3-); do
                 if [ "$branch" != "$MASTER_BRANCH" ]; then
                     git branch -d "$branch"
                 fi
