@@ -153,10 +153,21 @@ function hgit_clone {
         echo "The magic that checks out your fork only works with GitHub and only"
         echo "with SSH URLs. Other URLs are checked out as well, but they are"
         echo "passed on to git as they are without trying to do anything clever."
+        echo ""
+        echo "You can abbreviate GitHub URLs: 'hgit clone gh:<owner>/<repo> will be"
+        echo "expanded to mean 'hgit clone git@github.com:<owner>/<repo>.git'."
         return
     fi
 
     URL="$1"
+
+    # Expand an abbreviated GitHub URL
+    if [ "$(cut -c -3 <<<"$URL")" = "gh:" ]; then
+        OWNER_AND_REPO="$(cut -c 4- <<<"$URL")"
+        OWNER="$(cut -d/ -f1 <<<"$OWNER_AND_REPO")"
+        REPO="$(cut -d/ -f2 <<<"$OWNER_AND_REPO")"
+        URL="git@github.com:${OWNER}/${REPO}.git"
+    fi
 
     # See if this even is a GitHub repo at all
     if [ "$(cut -c -15 <<<"$URL")" != "git@github.com:" ]; then
@@ -171,7 +182,7 @@ function hgit_clone {
     REPO="$(cut -d/ -f2 <<<"$OWNER_AND_REPO" | sed 's/.git$//')"
     INTO="${2:-${REPO,,}}"
 
-    git clone "$1" "$INTO"
+    git clone "$URL" "$INTO"
 
     if [ "$OWNER" = "$MY_GITHUB_USER" ]; then
         return
