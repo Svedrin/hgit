@@ -893,7 +893,7 @@ function hgit_add {
     if [ -z "${1:-}" ] || [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
         echo "Add files to the staging area, to be picked up by the next commit."
         echo
-        echo "Usage: hgit add [-h|--help] [-p|--patch] <files>"
+        echo "Usage: hgit add [-h|--help] [-p|--patch] [-n|--dry-run|--preview] <files>"
         echo
         echo "This is useful when:"
         echo
@@ -915,7 +915,11 @@ function hgit_add {
         return
     fi
     if [ "${1:-}" = "-p" ] || [ "${1:-}" = "--patch" ] || [ "${1:-}" = "--partial" ]; then
+        shift
         git add -p -- "$@"
+    elif [ "${1:-}" = "-n" ] || [ "${1:-}" = "--dry-run" ] || [ "${1:-}" = "--preview" ]; then
+        shift
+        git add -n -- "$@"
     else
         git add -- "$@"
     fi
