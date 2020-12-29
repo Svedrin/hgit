@@ -4,9 +4,17 @@ set -e
 set -u
 
 if [ ! -f ~/.hgitrc ]; then
-    echo "Please create ~/.hgitrc to configure your GitHub username:"
-    echo 'echo MY_GITHUB_USER="your username here" > ~/.hgitrc'
-    exit 2
+    # ~/.hgitrc is missing. See if we're running in a tty, and
+    # if so, offer to create it - otherwise bail
+    if [[ -t 0 ]]; then
+        echo -n "Configuring hgit in ~/.hgitrc. What is your GitHub username? [$USER] "
+        read GHUSER
+        echo "MY_GITHUB_USER=${GHUSER:-$USER}" > ~/.hgitrc
+    else
+        echo "Please create ~/.hgitrc to configure your GitHub username:"
+        echo 'echo MY_GITHUB_USER="your username here" > ~/.hgitrc'
+        exit 2
+    fi
 fi
 
 . ~/.hgitrc
