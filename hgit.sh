@@ -226,7 +226,7 @@ function hgit_collab_with {
 
     REMOTE_URL="git@github.com:${COLLAB_USER}/${ORIGIN_REPO}.git"
     if git ls-remote --heads "$REMOTE_URL" &>/dev/null; then
-    git remote add "${COLLAB_USER,,}" "$REMOTE_URL"
+        git remote add "${COLLAB_USER,,}" "$REMOTE_URL"
     fi
 }
 
