@@ -184,10 +184,6 @@ function hgit_clone {
 
     git clone "$URL" "$INTO"
 
-    if [ "$OWNER" = "$MY_GITHUB_USER" ]; then
-        return
-    fi
-
     cd "$INTO"
 
     # See if master has been renamed in this repo, and if so,
@@ -197,10 +193,14 @@ function hgit_clone {
         printf 'MASTER_BRANCH="%s"\n' "$CURR_BRANCH" > .git/hgitrc
     fi
 
-    MY_REMOTE_URL="git@github.com:$(hgit_my_fork)/${REPO}.git"
-    if git ls-remote --heads "$MY_REMOTE_URL" &>/dev/null; then
-        git remote add "$(hgit_my_fork)" "$MY_REMOTE_URL"
-        git fetch "$(hgit_my_fork)"
+    # If this is not our repo, see if we have a fork, and if so,
+    # add it as a remote
+    if [ "$OWNER" != "$MY_GITHUB_USER" ]; then
+        MY_REMOTE_URL="git@github.com:$(hgit_my_fork)/${REPO}.git"
+        if git ls-remote --heads "$MY_REMOTE_URL" &>/dev/null; then
+            git remote add "$(hgit_my_fork)" "$MY_REMOTE_URL"
+            git fetch "$(hgit_my_fork)"
+        fi
     fi
 }
 
