@@ -6,7 +6,7 @@ set -u
 if [ ! -f ~/.hgitrc ]; then
     # ~/.hgitrc is missing. See if we're running in a tty, and
     # if so, offer to create it - otherwise bail
-    if [[ -t 0 ]]; then
+    if [ -t 0 ]; then
         echo -n "Configuring hgit in ~/.hgitrc. What is your GitHub username? [$USER] "
         read GHUSER
         echo "MY_GITHUB_USER=${GHUSER:-$USER}" > ~/.hgitrc
