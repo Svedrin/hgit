@@ -204,7 +204,7 @@ function hgit_clone {
     # If this is not our repo, see if we have a fork, and if so,
     # add it as a remote
     if [ "$OWNER" != "$MY_GITHUB_USER" ]; then
-        MY_REMOTE_URL="git@github.com:$(hgit_my_fork)/${REPO}.git"
+        MY_REMOTE_URL="git@github.com:${MY_GITHUB_USER}/${REPO}.git"
         if git ls-remote --heads "$MY_REMOTE_URL" &>/dev/null; then
             git remote add "$(hgit_my_fork)" "$MY_REMOTE_URL"
             git fetch "$(hgit_my_fork)"
