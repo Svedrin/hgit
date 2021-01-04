@@ -296,7 +296,7 @@ Let's unpack that output, because a lot has happened here.
     in the fork.
 
 It is important to understand that `hgit` knows about forks, and changes
-its behavior when a fork exist to make working with them easier. Most importantly,
+its behavior when a fork exists to make working with them easier. Most importantly,
 when a fork exists:
 
 *   `hgit` will not let you commit to the `master` branch anymore. Repos that
