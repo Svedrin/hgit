@@ -1,0 +1,18 @@
+---
+kind: pipeline
+name: default
+
+steps:
+- name: run tests
+  image: alpine:latest
+  commands:
+  - apk add --no-cache bash git
+  - git config --global init.defaultBranch master
+  - git config --global user.email theo.tester@example.com
+  - git config --global user.name "Theo the Tester"
+  - ./tests.sh
+---
+kind: signature
+hmac: 78ad32358446c6ba0231f6400fde3130c743454a2ca937cf40dd549e85c4bdf5
+
+...

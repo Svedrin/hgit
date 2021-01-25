@@ -1,0 +1,9 @@
+diff --git README.md README.md
+new file mode 100644
+index 0000000..d374294
+--- /dev/null
++++ README.md
+@@ -0,0 +1,3 @@
++This directory contains test data for hgit.
++
++You can usually ignore it, tests are run automatically in CI.

@@ -3,98 +3,100 @@
 set -e
 set -u
 
-if [ ! -f ~/.hgitrc ]; then
-    # ~/.hgitrc is missing. See if we're running in a tty, and
-    # if so, offer to create it - otherwise bail
-    if [ -t 0 ]; then
-        echo -n "Configuring hgit in ~/.hgitrc. What is your GitHub username? [$USER] "
-        read GHUSER
-        echo "MY_GITHUB_USER=${GHUSER:-$USER}" > ~/.hgitrc
-    else
-        echo "Please create ~/.hgitrc to configure your GitHub username:"
-        echo 'echo MY_GITHUB_USER="your username here" > ~/.hgitrc'
-        exit 2
+if [ "${RUNNING_IN_CI:-false}" = "false" ]; then
+    if [ ! -f ~/.hgitrc ]; then
+        # ~/.hgitrc is missing. See if we're running in a tty, and
+        # if so, offer to create it - otherwise bail
+        if [ -t 0 ]; then
+            echo -n "Configuring hgit in ~/.hgitrc. What is your GitHub username? [$USER] "
+            read GHUSER
+            echo "MY_GITHUB_USER=${GHUSER:-$USER}" > ~/.hgitrc
+        else
+            echo "Please create ~/.hgitrc to configure your GitHub username:"
+            echo 'echo MY_GITHUB_USER="your username here" > ~/.hgitrc'
+            exit 2
+        fi
     fi
+
+    . ~/.hgitrc
+
+    REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+    MASTER_BRANCH="master"
+
+    if [ -e "$REPO_ROOT/.git/hgitrc" ]; then
+        . "$REPO_ROOT/.git/hgitrc"
+    fi
+
+    COMMAND=""
+
+    while [ -n "${1:-}" ]; do
+        case "$1" in
+            -h|--help)
+                echo  "Human-friendly git. (YMMV.)"
+                echo
+                echo  "Usage: $0 [options] [command] [arguments]"
+                echo
+                echo  "Options:"
+                echo  " -h --help             This help text"
+                echo
+                echo  "Commands:"
+                echo
+                echo  " status, st            Show status of the workdir in way-too-long or nicely-short form."
+                echo
+                echo  " init                  Initialize a new git repo in a directory."
+                echo  " clone                 Clone a remote repo, plus your fork if you have one."
+                echo  " collab-with           Add a remote for collaborating with another GitHub user."
+                echo  " branch, b, br         Create a new branch."
+                echo  " branch-from           Create a new branch from a specific commit or tag."
+                echo  " branches, bs          List existing branches, either local ones or those in a remote."
+                echo  " use                   Switch to an existing branch, even if it only exists in your"
+                echo  "                       fork but not yet locally."
+                echo  " kill                  Delete a branch."
+                echo
+                echo  " diff, d               Diff workdir."
+                echo  " diff-staging, ds, dc  Diff staging area."
+                echo  " commit, ci            Commit."
+                echo  " uncommit              Undo the last commit, unless you pushed it already. Does not"
+                echo  "                       modify your workdir, changes are uncommited but not undone."
+                echo  " change, c             Diff-or-commit (see its --help)."
+                echo  " log                   Show logs."
+                echo  " tag                   Create a tag and push it upstream."
+                echo  " tags                  List existing tags."
+                echo  " amend                 Amend stuff to the last commit, unless you pushed it already."
+                echo  " push                  Push changes to a fork or upstream."
+                echo  " pull                  Pull changes from a fork or upstream."
+                echo  " pr                    Open a Pull Request."
+                echo
+                echo  " add                   Add a file to the repo, or add its changes to the staging area."
+                echo  " cp                    Copy src to dest, then add dest to git."
+                echo  " mv                    Move or rename a file, or record that you did that already."
+                echo  " rm                    Remove a file."
+                echo  " cat                   Dump files from the repo to stdout."
+                echo  " forget                Un-add/cp/mv/rm a file without touching the workdir."
+                echo  " revert, re            Undo your changes and set the file to the latest state in the"
+                echo  "                       repo or staging area."
+                echo  " ignore                Add a path to .gitignore."
+                echo  " gh                    View files on GitHub."
+                echo
+                echo  "See \`$0 <command> --help\` for help on specific commands."
+                echo
+                exit 0
+                ;;
+
+            -*)
+                echo "Unknown option $1, see --help"
+                exit 1
+                ;;
+
+            *)
+                COMMAND="${1/-/_}"
+                shift
+                break
+                ;;
+        esac
+        shift
+    done
 fi
-
-. ~/.hgitrc
-
-REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
-MASTER_BRANCH="master"
-
-if [ -e "$REPO_ROOT/.git/hgitrc" ]; then
-    . "$REPO_ROOT/.git/hgitrc"
-fi
-
-COMMAND=""
-
-while [ -n "${1:-}" ]; do
-    case "$1" in
-        -h|--help)
-            echo  "Human-friendly git. (YMMV.)"
-            echo
-            echo  "Usage: $0 [options] [command] [arguments]"
-            echo
-            echo  "Options:"
-            echo  " -h --help             This help text"
-            echo
-            echo  "Commands:"
-            echo
-            echo  " status, st            Show status of the workdir in way-too-long or nicely-short form."
-            echo
-            echo  " init                  Initialize a new git repo in a directory."
-            echo  " clone                 Clone a remote repo, plus your fork if you have one."
-            echo  " collab-with           Add a remote for collaborating with another GitHub user."
-            echo  " branch, b, br         Create a new branch."
-            echo  " branch-from           Create a new branch from a specific commit or tag."
-            echo  " branches, bs          List existing branches, either local ones or those in a remote."
-            echo  " use                   Switch to an existing branch, even if it only exists in your"
-            echo  "                       fork but not yet locally."
-            echo  " kill                  Delete a branch."
-            echo
-            echo  " diff, d               Diff workdir."
-            echo  " diff-staging, ds, dc  Diff staging area."
-            echo  " commit, ci            Commit."
-            echo  " uncommit              Undo the last commit, unless you pushed it already. Does not"
-            echo  "                       modify your workdir, changes are uncommited but not undone."
-            echo  " change, c             Diff-or-commit (see its --help)."
-            echo  " log                   Show logs."
-            echo  " tag                   Create a tag and push it upstream."
-            echo  " tags                  List existing tags."
-            echo  " amend                 Amend stuff to the last commit, unless you pushed it already."
-            echo  " push                  Push changes to a fork or upstream."
-            echo  " pull                  Pull changes from a fork or upstream."
-            echo  " pr                    Open a Pull Request."
-            echo
-            echo  " add                   Add a file to the repo, or add its changes to the staging area."
-            echo  " cp                    Copy src to dest, then add dest to git."
-            echo  " mv                    Move or rename a file, or record that you did that already."
-            echo  " rm                    Remove a file."
-            echo  " cat                   Dump files from the repo to stdout."
-            echo  " forget                Un-add/cp/mv/rm a file without touching the workdir."
-            echo  " revert, re            Undo your changes and set the file to the latest state in the"
-            echo  "                       repo or staging area."
-            echo  " ignore                Add a path to .gitignore."
-            echo  " gh                    View files on GitHub."
-            echo
-            echo  "See \`$0 <command> --help\` for help on specific commands."
-            echo
-            exit 0
-            ;;
-
-        -*)
-            echo "Unknown option $1, see --help"
-            exit 1
-            ;;
-
-        *)
-            COMMAND="${1/-/_}"
-            shift
-            break
-            ;;
-    esac
-    shift
-done
 
 # Helper functions
 
@@ -103,7 +105,7 @@ function hgit_my_fork {
 }
 
 function hgit_have_remote {
-    git remote | grep -q "^$1$"
+    git remote | grep -q "^$1\$"
 }
 
 function hgit_have_fork {
@@ -129,7 +131,7 @@ function hgit_last_commit_not_yet_pushed {
     fi
     LAST_COMMIT="$(git log --format="%H" -n 1)"
     git rev-list --left-right "$CURR_BRANCH"..."$REMOTE"/"$CURR_BRANCH" | \
-        grep -q "^<$LAST_COMMIT$"
+        grep -q "^<$LAST_COMMIT\$"
 }
 
 # Init, clone
@@ -1136,14 +1138,16 @@ function hgit_gh {
 }
 
 
-if [ ! -n "$COMMAND" ]; then
-    echo "need a command, see --help"
-    exit 1
-fi
+if [ "${RUNNING_IN_CI:-false}" = "false" ]; then
+    if [ ! -n "$COMMAND" ]; then
+        echo "need a command, see --help"
+        exit 1
+    fi
 
-if [ "$(type -t "hgit_$COMMAND")" != "function" ]; then
-    echo "command $COMMAND is not defined, see --help"
-    exit 1
-fi
+    if [ "$(type -t "hgit_$COMMAND")" != "function" ]; then
+        echo "command $COMMAND is not defined, see --help"
+        exit 1
+    fi
 
-"hgit_$COMMAND" "$@"
+    "hgit_$COMMAND" "$@"
+fi
