@@ -669,11 +669,22 @@ function hgit_kill {
     if [ -z "${1:-}" ] || [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
         echo "Delete a branch."
         echo
-        echo "Usage: hgit kill [-h|--help] <branch name>"
+        echo "Usage: hgit kill [-h|--help] <branch name|--all>"
         return
     fi
     hgit_use "$MASTER_BRANCH"
-    git branch -D "$1"
+    if [ "$1" = "--all" ]; then
+        echo "This will delete all branches except $MASTER_BRANCH, are you sure?"
+        echo "If yes, run $0 kill --all-yes-sure."
+    elif [ "$1" = "--all-yes-sure" ]; then
+        for branch in $(git branch -l | cut -c 3-); do
+            if [ "$branch" != "$MASTER_BRANCH" ]; then
+                git branch -D "$branch"
+            fi
+        done
+    else
+        git branch -D "$1"
+    fi
 }
 
 # Push/pull
