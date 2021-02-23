@@ -1013,7 +1013,7 @@ function hgit_mv {
         mkdir -p "$(dirname "$DEST")"
     fi
     # remember if the source arg pointed to a directory
-    SOURCE_IS_DIR="$([ -d "$SOURCE" ] && echo true)"
+    SOURCE_IS_DIR="$([ -d "$SOURCE" ] && echo true || echo false)"
     # Do the move
     git mv "$SOURCE" "$DEST"
     # If the source directory is now empty, delete it
