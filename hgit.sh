@@ -1001,7 +1001,27 @@ function hgit_mv {
         SOURCE="$1"
         DEST="$2"
     fi
+    # Let's see if we need to mkdir the target directory first.
+    # We will assume the "$DEST" to be a file name, UNLESS
+    # * it points to a directory that exists, or
+    # * it ends with a `/`.
+    if [ -d "$DEST" ] || [[ "$DEST" = */ ]]; then
+        # Directory!
+        mkdir -p "$DEST"
+    else
+        # Everything else is assumed to be a file name.
+        mkdir -p "$(dirname "$DEST")"
+    fi
+    # remember if the source arg pointed to a directory
+    SOURCE_IS_DIR="$([ -d "$SOURCE" ] && echo true)"
+    # Do the move
     git mv "$SOURCE" "$DEST"
+    # If the source directory is now empty, delete it
+    if [ "$SOURCE_IS_DIR" = true ]; then
+        rmdir -p --ignore-fail-on-non-empty "$SOURCE"
+    else
+        rmdir -p --ignore-fail-on-non-empty "$(dirname "$SOURCE")"
+    fi
 }
 
 function hgit_rm {
