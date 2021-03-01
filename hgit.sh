@@ -1017,10 +1017,12 @@ function hgit_mv {
     # Do the move
     git mv "$SOURCE" "$DEST"
     # If the source directory is now empty, delete it
-    if [ "$SOURCE_IS_DIR" = true ]; then
-        rmdir -p --ignore-fail-on-non-empty "$SOURCE"
-    else
-        rmdir -p --ignore-fail-on-non-empty "$(dirname "$SOURCE")"
+    RMDIR_TARGET="$SOURCE"
+    if [ "$SOURCE_IS_DIR" = false ]; then
+        RMDIR_TARGET="$(dirname "$SOURCE")"
+    fi
+    if [ "$RMDIR_TARGET" != "." ]; then
+        rmdir -p --ignore-fail-on-non-empty "$(dirname "$RMDIR_TARGET")"
     fi
 }
 
