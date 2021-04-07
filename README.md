@@ -189,7 +189,7 @@ having run `h use master` before, this is what `hgit` will say:
 ```
 # h br other-feature
 You're creating a branch while you're not on master. You probably don't want to do that, aborting.
-If you do want to do this, run git checkout -b other-feature.
+Try running 'hgit use master' and then repeating this command.
 ```
 
 ## Contributing to someone else's repo
@@ -428,7 +428,7 @@ It is thus focused on making your _everyday_ life with git easier, rather than f
 
 I've come to completely avoid `git rebase` for the following reasons:
 
-* When you're working on a branch on multiple machines and you want to sync changes back and forth between them, `rebase` creates a hassle because you will no longer be able to blindly run `git pull`. Instead, you have to pass the `--rebase` option when a rebase has happened. This is annoying, especially when multiple people are working on the same branch.
+* When you're working on a branch on multiple machines and you want to sync changes back and forth between them, `rebase` creates a hassle because you will no longer be able to blindly run `git pull`. Instead, you have to pass the `--rebase` option when a rebase has happened, which means you have to first _check_ if a rebase has happened. This is annoying, especially when multiple people are working on the same branch.
 * It's unnecessary: Just merge from master to update the feature branch, and squash your commits when merging back to master. GitHub has a button for that now!
 
 # Compatibility with git
