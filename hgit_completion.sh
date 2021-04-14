@@ -1,5 +1,5 @@
 _hgit_complete_changed_or_unknown_files () {
-    compgen -W "$(git status --short --porcelain | cut -c 4-)" -- "${COMP_WORDS[-1]}"
+    compgen -W "$(git status --short | cut -c 4-)" -- "${COMP_WORDS[-1]}"
 }
 
 _hgit_complete_branches () {
