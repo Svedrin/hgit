@@ -7,7 +7,7 @@ set -u
 
 if [ "${RUNNING_IN_CI:-false}" = "false" ]; then
     if [ ! -f ~/.hgitrc ]; then
-        if [ -z "$USER" ]; then
+        if [ -z "${USER:-}" ]; then
             USER="$(id -u -n)"
         fi
         # ~/.hgitrc is missing. See if we're running in a tty, and
@@ -37,7 +37,7 @@ if [ "${RUNNING_IN_CI:-false}" = "false" ]; then
     while [ -n "${1:-}" ]; do
         case "$1" in
             -h|--help)
-                echo  "Human-friendly git. (YMMV.)"
+                echo  "Human-friendly git."
                 echo
                 echo  "Usage: $0 [options] [command] [arguments]"
                 echo
