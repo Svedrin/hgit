@@ -443,6 +443,7 @@ Easy, just copy-paste these commands into a shell:
 git clone https://github.com/Svedrin/hgit $HOME/hgit
 echo alias h=$HOME/hgit/hgit.sh >> $HOME/.bashrc
 echo source $HOME/hgit/hgit_completion.sh >> $HOME/.bashrc
+source $HOME/.bashrc
 ```
 
 # Config
