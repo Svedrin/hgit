@@ -2,6 +2,22 @@ _hgit_complete_changed_or_unknown_files () {
     compgen -W "$(git status --short --porcelain | cut -c 4-)" -- "${COMP_WORDS[-1]}"
 }
 
+_hgit_complete_branches () {
+    if [ "${#COMP_WORDS[@]}" -gt 1 ]; then
+        git branch -l | grep -- "${COMP_WORDS[-1]}"
+    else
+        git branch -l
+    fi
+}
+
+_hgit_complete_bs () {
+    _hgit_complete_branches
+}
+
+_hgit_complete_use () {
+    _hgit_complete_branches
+}
+
 _hgit_completions()
 {
     # Do we have a command?
@@ -20,7 +36,7 @@ _hgit_completions()
         fi
     else
         # Nope, complete with a list of commands
-        ALL_COMMANDS="status st diff d diff-staging ds dc commit ci change c add cp mv rm cat forget revert re ignore gh"
+        ALL_COMMANDS="status st diff d diff-staging ds dc commit ci change c add cp mv rm cat forget revert re ignore gh branches bs use"
         COMPREPLY=($(compgen -W "$ALL_COMMANDS" -- "${COMP_WORDS[1]}"))
     fi
 }
