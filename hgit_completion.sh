@@ -25,4 +25,4 @@ _hgit_completions()
     fi
 }
 
-complete -F _hgit_completions hgit h
+complete -F _hgit_completions -o default hgit h
