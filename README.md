@@ -435,6 +435,16 @@ I've come to completely avoid `git rebase` for the following reasons:
 
 `hgit` is just a shell script that works on top of git commands. You can switch back and forth anytime. However, `hgit` does expect the local repo to be set up in a certain way, and if you disturb that, you'll find that commands don't work anymore and you'll have to resort to their underlying `git` counterparts fnord.
 
+# Installation
+
+Easy, just copy-paste these commands into a shell:
+
+```
+git clone https://github.com/Svedrin/hgit $HOME/hgit
+echo alias h=$HOME/hgit/hgit.sh >> $HOME/.bashrc
+echo source $HOME/hgit/hgit_completion.sh >> $HOME/.bashrc
+```
+
 # Config
 
 `hgit` requires a config file in `~/.hgitrc` that defines the name of your GitHub user:
