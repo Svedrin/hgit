@@ -833,6 +833,8 @@ function hgit_pr {
         echo
         echo "Target branch defaults to $MASTER_BRANCH."
         echo
+        echo "If you have not yet pushed your changes, this command will do it for you before opening the browser."
+        echo
         echo "Options:"
         echo " -h --help             This help text"
         echo " -d --dry-run          Only print the URL, do not open the browser."
@@ -843,6 +845,10 @@ function hgit_pr {
     fi
     if [ "${1:-}" = "-d" ] || [ "${1:-}" = "--dry-run" ] || [ -n "${SSH_CONNECTION:-}" ]; then
         DRY_RUN="true"
+    fi
+
+    if hgit_last_commit_not_yet_pushed; then
+        hgit_push
     fi
 
     TARGET_BRANCH="${2:-$MASTER_BRANCH}"
