@@ -77,6 +77,7 @@ if [ "${RUNNING_IN_CI:-false}" = "false" ]; then
                 echo  " mv                    Move or rename a file, or record that you did that already."
                 echo  " rm                    Remove a file."
                 echo  " cat                   Dump files from the repo to stdout."
+                echo  " touch                 Create or touch a file, creating all its parent directories."
                 echo  " forget                Un-add/cp/mv/rm a file without touching the workdir."
                 echo  " revert, re            Undo your changes and set the file to the latest state in the"
                 echo  "                       repo or staging area."
@@ -1109,6 +1110,32 @@ function hgit_cat {
         ARGS+=("$COMMIT:$FILE")
     done
     git show "${ARGS[@]}"
+}
+
+function hgit_touch {
+    if [ -z "${1:-}" ] || [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
+        echo "Create or touch a file, creating all its parent directories."
+        echo
+        echo "Usage: hgit touch <path>"
+        return
+    fi
+
+    while [ -n "${1:-}" ]; do
+        # Let's see if we need to mkdir the target directory first.
+        # We will assume "$1" to be a file name, UNLESS
+        # * it points to a directory that exists, or
+        # * it ends with a `/`.
+        if [ -d "$1" ] || [[ "$1" = */ ]]; then
+            # Directory!
+            mkdir -p "$1"
+        else
+            # Everything else is assumed to be a file name.
+            mkdir -p "$(dirname "$1")"
+        fi
+
+        touch "$1"
+        shift
+    done
 }
 
 function hgit_gh {
