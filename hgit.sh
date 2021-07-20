@@ -83,6 +83,8 @@ if [ "${RUNNING_IN_CI:-false}" = "false" ]; then
                 echo  "                       repo or staging area."
                 echo  " ignore                Add a path to .gitignore."
                 echo  " gh                    View files on GitHub."
+                echo  " drone-sign, ds        Run 'drone sign --save <origin>/<repo>."
+                echo  " drone                 Open DroneCI for this repo."
                 echo
                 echo  "See \`$0 <command> --help\` for help on specific commands."
                 echo
@@ -1208,6 +1210,42 @@ function hgit_gh {
     done
 }
 
+function hgit_drone {
+    REMOTE="$(hgit_remote_for_branch "$MASTER_BRANCH")"
+    REMOTE_OWNER_AND_REPO="$(git remote get-url "$REMOTE" | cut -d: -f2 | sed 's/.git$//')"
+    if [ -z "${DRONE_SERVER:-}" ]; then
+        echo "\$DRONE_SERVER is not set, cannot build a URL"
+        exit 1
+    fi
+    URL="${DRONE_SERVER%%/}/${REMOTE_OWNER_AND_REPO}"
+    if [ -n "${SSH_CONNECTION:-}" ]; then
+        echo "$URL"
+    else
+        x-www-browser "$URL"
+    fi
+}
+
+function hgit_drone_sign {
+    if [ ! -e "$REPO_ROOT/.drone.yml" ]; then
+        echo "No .drone.yml exists, nothing to sign"
+        exit 1
+    fi
+    if [ -z "$(which drone)" ]; then
+        echo "drone command not found, cannot sign"
+        exit 1
+    fi
+
+    REMOTE="$(hgit_remote_for_branch "$MASTER_BRANCH")"
+    REMOTE_OWNER_AND_REPO="$(git remote get-url "$REMOTE" | cut -d: -f2 | sed 's/.git$//')"
+    cd "$REPO_ROOT"
+    set -x
+    drone sign --save "$REMOTE_OWNER_AND_REPO"
+    hgit_add ".drone.yml"
+}
+
+function hgit_ds {
+    hgit_drone_sign "$@"
+}
 
 if [ "${RUNNING_IN_CI:-false}" = "false" ]; then
     if [ ! -n "$COMMAND" ]; then
