@@ -1238,7 +1238,6 @@ function hgit_drone_sign {
     REMOTE="$(hgit_remote_for_branch "$MASTER_BRANCH")"
     REMOTE_OWNER_AND_REPO="$(git remote get-url "$REMOTE" | cut -d: -f2 | sed 's/.git$//')"
     cd "$REPO_ROOT"
-    set -x
     drone sign --save "$REMOTE_OWNER_AND_REPO"
     hgit_add ".drone.yml"
 }
