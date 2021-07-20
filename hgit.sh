@@ -661,7 +661,7 @@ function hgit_br {
 }
 
 function hgit_branch_from {
-    if [ -z "${1:-}" ] || [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
+    if [ -z "${1:-}" ] || [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ] || [ -z "${2:-}" ]; then
         echo "Create a branch that starts at a given commit or tag and switch to it."
         echo
         echo "Usage: hgit branch-from [-h|--help] <branch name> <commit or tag>"
