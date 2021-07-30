@@ -542,6 +542,17 @@ function hgit_bs {
     hgit_branches "$@"
 }
 
+function hgit_with_stash {
+    DO_STASH="$(git status --short | grep -q '^ M' && echo true)"
+    if [ "$DO_STASH" = true ]; then
+        git stash --quiet
+    fi
+    "$@"
+    if [ "$DO_STASH" = true ]; then
+        git stash pop --quiet
+    fi
+}
+
 function hgit_use {
     if [ -z "${1:-}" ] || [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
         echo "Find and switch to an existing branch."
@@ -578,13 +589,13 @@ function hgit_use {
     fi
     # Are we explicitly checking out master?
     if [ "$SEARCH" = "$MASTER_BRANCH" ]; then
-        git checkout "$MASTER_BRANCH"
+        hgit_with_stash git checkout "$MASTER_BRANCH"
         if hgit_have_fork; then
             # If we have a fork of this repo, prune branches that no longer exist in it
             git fetch -p $(hgit_my_fork)
         fi
         # pull from upstream
-        git pull
+        hgit_with_stash git pull
         # Prune merged branches locally so that they are removed from git config
         for branch in $(git branch --merged "$MASTER_BRANCH" | cut -c 3-); do
             if [ "$branch" != "$MASTER_BRANCH" ]; then
@@ -599,7 +610,7 @@ function hgit_use {
         if [ "${CANDIDATES[0]}" = "$MASTER_BRANCH" ]; then
             hgit_use "$MASTER_BRANCH"
         else
-            git checkout "${CANDIDATES[0]}"
+            hgit_with_stash git checkout "${CANDIDATES[0]}"
         fi
     elif [ "${#CANDIDATES[*]}" -gt "1" ]; then
         echo "Found multiple branches, please make your search term more specific:"
@@ -611,7 +622,7 @@ function hgit_use {
         CANDIDATES=($(git ls-remote --heads "$REMOTE" | cut -d/ -f3 | grep "$SEARCH" || true))
         if [ "${#CANDIDATES[*]}" = "1" ]; then
             git fetch "$REMOTE" "${CANDIDATES[0]}"
-            git checkout "${CANDIDATES[0]}"
+            hgit_with_stash git checkout "${CANDIDATES[0]}"
         elif [ "${#CANDIDATES[*]}" -gt "1" ]; then
             echo "Found multiple branches, please make your search term more specific:"
             for CAND in "${CANDIDATES[@]}"; do
