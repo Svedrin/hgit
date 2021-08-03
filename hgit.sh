@@ -59,7 +59,7 @@ if [ "${RUNNING_IN_CI:-false}" = "false" ]; then
                 echo  " kill                  Delete a branch."
                 echo
                 echo  " diff, d               Diff workdir."
-                echo  " diff-staging, ds, dc  Diff staging area."
+                echo  " diff-staging, dc      Diff staging area (git diff --cached)."
                 echo  " commit, ci            Commit."
                 echo  " uncommit              Undo the last commit, unless you pushed it already. Does not"
                 echo  "                       modify your workdir, changes are uncommited but not undone."
@@ -339,10 +339,6 @@ function hgit_diff_staging {
 }
 
 function hgit_dc {
-    hgit_diff_staging "$@"
-}
-
-function hgit_ds {
     hgit_diff_staging "$@"
 }
 
