@@ -377,8 +377,9 @@ function hgit_commit {
     done
     if hgit_have_fork && [ "$(hgit_branch)" = "$MASTER_BRANCH" ]; then
         echo "You have a fork and you're commiting to $MASTER_BRANCH. You probably don't want to do that, aborting."
-    elif git status --short | grep -q '^M' && [ "${#FILES[@]}" -gt 0 ]; then
-        echo "There are changes in the staging area (see h dc), but you also gave a list of files on the command line. This will probably commit more changes than you intend to, aborting."
+    elif [ "${#FILES[@]}" -gt 0 ] && git status --short -- "${FILES[@]}" | grep -q '^M'; then
+        echo "There are changes in the staging area for some of the files also given on the command line (see h dc)."
+        echo "This will probably commit more changes than you intend to - aborting."
     elif [ -n "$MESSAGE" ]; then
         git commit -m "$MESSAGE" -- "${FILES[@]}"
     else
