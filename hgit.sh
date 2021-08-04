@@ -539,7 +539,7 @@ function hgit_bs {
 }
 
 function hgit_with_stash {
-    DO_STASH="$(git status --short | grep -q '^ M' && echo true)"
+    DO_STASH="$(git status --short | grep -q '^ M' && echo true || echo false)"
     if [ "$DO_STASH" = true ]; then
         git stash --quiet
     fi
