@@ -1158,7 +1158,7 @@ function hgit_gh {
 
     COMMIT="$(git log --format="%H" -n 1)" # last commit in current branch
     DRY_RUN="false"
-    REMOTE="$(hgit_remote_for_branch "$(hgit_branch)")"
+    REMOTE="$(hgit_remote_for_branch "$MASTER_BRANCH")"
     FILES=()
 
     while [ -n "${1:-}" ]; do
@@ -1175,7 +1175,7 @@ function hgit_gh {
                 if [ -n "${SSH_CONNECTION:-}" ]; then
                     echo "                       SSH session detected, forcing dry-run."
                 fi
-                echo " -o --origin           Always show origin, even if we're on a branch other than $MASTER_BRANCH."
+                echo " -f --fork             Show our fork."
                 return
                 ;;
             -c|--commit)
@@ -1185,8 +1185,8 @@ function hgit_gh {
             -d|--dry-run)
                 DRY_RUN="true"
                 ;;
-            -o|--origin)
-                REMOTE="origin"
+            -f|--fork)
+                REMOTE="$(hgit_my_fork)"
                 ;;
             *)
                 FILES+=("$1")
