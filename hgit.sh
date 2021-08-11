@@ -714,11 +714,9 @@ function hgit_pull {
         echo "Usage: hgit pull [-h|--help] [<remote> [<branch>]|$MASTER_BRANCH]"
         echo
         echo "If remote and branch are both specified, we'll pull that branch from that remote."
-        echo "If just a remote is given, we'll pull the current branch from that remote."
-        echo "If just the word '$MASTER_BRANCH' is given, we'll pull origin $MASTER_BRANCH"
-        echo "If nothing is given and we're on $MASTER_BRANCH, we'll pull origin $MASTER_BRANCH"
-        echo "If nothing is given and we're not on $MASTER_BRANCH and we have a fork, we'll pull the current branch from there."
-        echo "If nothing is given and we're not on $MASTER_BRANCH and we do not have a fork, we'll pull the current branch from origin."
+        echo "If just the word '$MASTER_BRANCH' is given, we'll pull $MASTER_BRANCH *from origin*."
+        echo "If we're on $MASTER_BRANCH, we'll pull $MASTER_BRANCH *from origin*."
+        echo "In all other cases, we'll let git decide where to pull from."
         return
     fi
     CURR_BRANCH="$(hgit_branch)"
@@ -731,24 +729,16 @@ function hgit_pull {
         # One arg == master
         REMOTE="origin"
         BRANCH="$MASTER_BRANCH"
-    elif [ -n "${1:-}" ]; then
-        # One arg: Remote
-        REMOTE="$1"
-        BRANCH="$CURR_BRANCH"
     elif [ "$CURR_BRANCH" = "$MASTER_BRANCH" ]; then
-        # No args, on master
+        # We're on master
         REMOTE="origin"
         BRANCH="$MASTER_BRANCH"
-    elif hgit_have_fork; then
-        # No args, not on master, and we have a fork
-        REMOTE="$(hgit_my_fork)"
-        BRANCH="$CURR_BRANCH"
-    else
-        # No args, not on master, no fork
-        REMOTE="origin"
-        BRANCH="$CURR_BRANCH"
     fi
-    git pull "$REMOTE" "$BRANCH"
+    if [ -n "${REMOTE:-}" ] && [ -n "${BRANCH:-}" ]; then
+        git pull "$REMOTE" "$BRANCH"
+    else
+        git pull
+    fi
 }
 
 function hgit_push {
