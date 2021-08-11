@@ -725,7 +725,7 @@ function hgit_pull {
     # How many args do we have?
     if [ -n "${1:-}" ] && [ -n "${2:-}" ]; then
         # Two args: remote and branch
-        REMOTE="$1"
+        REMOTE="${1,,}"
         BRANCH="$2"
     elif [ "${1:-}" = "$MASTER_BRANCH" ]; then
         # One arg == master
