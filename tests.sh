@@ -113,7 +113,10 @@ function test_hgit_basic_workflow() {
     hgit_dc > "$TEMPDIR/dc.txt"
     assert diff "$TEMPDIR/dc.txt" "$ROOTDIR/tests/hgit_basic_d_after_modify.txt"
 
-    hgit_ci README.md -m "modify stuff" > "$TEMPDIR/ci.txt"
+    hgit_ci README.md -m "modify stuff" > "$TEMPDIR/ci-fail.txt"
+    assert grep -q "aborting" "$TEMPDIR/ci-fail.txt"
+
+    hgit_ci -m "modify stuff" > "$TEMPDIR/ci.txt"
     assert grep -q "0-feature-branch" "$TEMPDIR/ci.txt"
 }
 
