@@ -608,6 +608,10 @@ function hgit_use {
     # Are we explicitly checking out master?
     if [ "$SEARCH" = "$MASTER_BRANCH" ]; then
         hgit_with_stash git checkout "$MASTER_BRANCH"
+        # If we don't have a remote for master, we're done
+        if [ -z "$(hgit_remote_for_branch "$MASTER_BRANCH")" ]; then
+            return
+        fi
         if hgit_have_fork; then
             # If we have a fork of this repo, prune branches that no longer exist in it
             git fetch -p $(hgit_my_fork)
