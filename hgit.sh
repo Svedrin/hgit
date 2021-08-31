@@ -63,6 +63,10 @@ if [ "${RUNNING_IN_CI:-false}" = "false" ]; then
                 echo  " commit, ci            Commit."
                 echo  " uncommit              Undo the last commit, unless you pushed it already. Does not"
                 echo  "                       modify your workdir, changes are uncommited but not undone."
+                echo  " backout               Given a commit ID, modify your workdir to prepare a commit"
+                echo  "                       that inverts those changes, effectively undoing them. The"
+                echo  "                       result is not committed automatically, you can preview the"
+                echo  "                       changes and cherry-pick the ones you like before committing."
                 echo  " change, c             Diff-or-commit (see its --help)."
                 echo  " log                   Show logs."
                 echo  " tag                   Create a tag and push it upstream."
@@ -494,10 +498,25 @@ function hgit_uncommit {
         echo "it. Pretending it never happened is not a good idea anymore."
         echo
         echo "There's no obvious best solution to this situation: You can"
-        echo "try to use \`git revert --no-commit\` though to put your"
+        echo "try to use \`h backout\` though to put your"
         echo "workdir in a state with those changes reversed, and then"
         echo "commit that state of the workdir."
     fi
+}
+
+function hgit_backout {
+    if [ -z "${1:-}" ] || [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
+        echo "Invert changes from a given commit."
+        echo
+        echo "Usage: hgit backout <commit>"
+        echo
+        echo "Given a commit ID, modify your workdir to prepare a commit"
+        echo "that inverts those changes, effectively undoing them. The"
+        echo "result is not committed automatically, you can preview the"
+        echo "changes and cherry-pick the ones you like before committing."
+        return
+    fi
+    git revert --no-commit "$@"
 }
 
 function hgit_tag {
