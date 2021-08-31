@@ -132,6 +132,10 @@ function test_hgit_basic_workflow() {
     # Try a commit without any file names (this must work)
     hgit_ci -m "modify stuff" > "$TEMPDIR/ci.txt"
     assert grep -q "0-feature-branch" "$TEMPDIR/ci.txt"
+
+    # Switch back to master
+    hgit_use master
+    assert [ "`hgit_branch`" = "master" ]
 }
 
 run_test test_hgit_basic_workflow
