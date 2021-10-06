@@ -641,7 +641,7 @@ function hgit_use {
         done
     elif [ -n "${REMOTE:-}" ]; then
         # Branch not found locally, but we have a fork: look there
-        CANDIDATES=($(git ls-remote --heads "$REMOTE" | cut -d/ -f3 | grep "$SEARCH" || true))
+        CANDIDATES=($(git ls-remote --heads "$REMOTE" | cut -d/ -f3- | grep "$SEARCH" || true))
         if [ "${#CANDIDATES[*]}" = "1" ]; then
             git fetch "$REMOTE" "${CANDIDATES[0]}"
             hgit_with_stash git checkout "${CANDIDATES[0]}"
