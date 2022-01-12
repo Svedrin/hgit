@@ -51,6 +51,7 @@ if [ "${RUNNING_IN_CI:-false}" = "false" ]; then
                 echo  " init                  Initialize a new git repo in a directory."
                 echo  " clone                 Clone a remote repo, plus your fork if you have one."
                 echo  " collab-with           Add a remote for collaborating with another GitHub user."
+                echo  " forked                I just forked this repo, add a remote for my fork."
                 echo  " branch, b, br         Create a new branch."
                 echo  " branch-from           Create a new branch from a specific commit or tag."
                 echo  " branches, bs          List existing branches, either local ones or those in a remote."
@@ -250,6 +251,10 @@ function hgit_collab_with {
     if git ls-remote --heads "$REMOTE_URL" &>/dev/null; then
         git remote add "${COLLAB_USER,,}" "$REMOTE_URL"
     fi
+}
+
+function hgit_forked {
+    hgit_collab_with "$MY_GITHUB_USER"
 }
 
 function hgit_checkout {
