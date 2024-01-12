@@ -351,6 +351,7 @@ function hgit_dc {
 function hgit_commit {
     MESSAGE=""
     FILES=()
+    PATCH=""
     while [ -n "${1:-}" ]; do
         case "$1" in
             -h|--help)
@@ -363,10 +364,15 @@ function hgit_commit {
                 echo "Options:"
                 echo " -h --help             This help text"
                 echo " -m --message          Commit changes with the specified message."
+                echo " -p --patch --partial  Interactively select the changes to commit."
                 return
                 ;;
             -m|--message)
                 MESSAGE="$2"
+                shift
+                ;;
+            -p|--patch|--partial)
+                PATCH="--patch"
                 shift
                 ;;
             -*)
@@ -385,9 +391,9 @@ function hgit_commit {
         echo "There are changes in the staging area for some of the files also given on the command line (see h dc)."
         echo "This will probably commit more changes than you intend to - aborting."
     elif [ -n "$MESSAGE" ]; then
-        git commit -m "$MESSAGE" -- "${FILES[@]}"
+        git commit $PATCH -m "$MESSAGE" -- "${FILES[@]}"
     else
-        git commit -- "${FILES[@]}"
+        git commit $PATCH -- "${FILES[@]}"
     fi
 }
 
