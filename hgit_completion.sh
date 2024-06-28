@@ -1,12 +1,12 @@
 _hgit_complete_changed_or_unknown_files () {
-    compgen -W "$(git status --short | cut -c 4-)" -- "${COMP_WORDS[-1]}"
+    compgen -W "$(git -C "$HGIT_COMPLETE_BASEDIR" status --short | cut -c 4-)" -- "${COMP_WORDS[-1]}"
 }
 
 _hgit_complete_branches () {
     if [ "${#COMP_WORDS[@]}" -gt 1 ]; then
-        git branch -l | grep -- "${COMP_WORDS[-1]}"
+        git -C "$HGIT_COMPLETE_BASEDIR" branch -l | grep -- "${COMP_WORDS[-1]}"
     else
-        git branch -l
+        git -C "$HGIT_COMPLETE_BASEDIR" branch -l
     fi
 }
 
@@ -20,9 +20,16 @@ _hgit_complete_use () {
 
 _hgit_completions()
 {
+    # Do we have a subdir?
+    if [[ "${COMP_WORDS[1]:-}" == */ ]]; then
+        HGIT_COMPLETE_BASEDIR="${COMP_WORDS[1]:-}"
+        COMMAND="${COMP_WORDS[2]:-}"
+    else
+        HGIT_COMPLETE_BASEDIR="$PWD"
+        COMMAND="${COMP_WORDS[1]:-}"
+    fi
     # Do we have a command?
-    if [ -n "${COMP_WORDS[1]:-}" ]; then
-        COMMAND="${COMP_WORDS[1]}"
+    if [ -n "${COMMAND:-}" ]; then
         # Check if we can complete this command
         # otherwise fallback to normal bash completion
         if [ "$(type -t "_hgit_complete_$COMMAND")" = "function" ]; then
