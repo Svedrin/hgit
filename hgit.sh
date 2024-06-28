@@ -39,10 +39,19 @@ if [ "${RUNNING_IN_CI:-false}" = "false" ]; then
             -h|--help)
                 echo  "Human-friendly git."
                 echo
-                echo  "Usage: $0 [options] [command] [arguments]"
+                echo  "Usage: hgit [options] [subdir/] [command] [arguments]"
                 echo
                 echo  "Options:"
                 echo  " -h --help             This help text"
+                echo
+                echo  "Subdir support:"
+                echo
+                echo  " If a subdir is specified, hgit will enter this directory before running commands. This"
+                echo  " way you can more easily work in subrepos. Best combined with hgit pull -r."
+                echo  " Beware though that the directory name must end in a / for it to be recognized:"
+                echo
+                echo  "   hgit subdir/ st  -> correct, executes 'hgit st' in the subdir"
+                echo  "   hgit subdir st   -> incorrect, results in 'unknown command subdir'"
                 echo
                 echo  "Commands:"
                 echo
@@ -102,9 +111,18 @@ if [ "${RUNNING_IN_CI:-false}" = "false" ]; then
                 ;;
 
             *)
-                COMMAND="${1/-/_}"
-                shift
-                break
+                if [[ "$1" = */ ]]; then
+                    if [ ! -d "$1" ] || [ ! -d "$1/.git" ]; then
+                        echo "$1 does not exist or is not a repository"
+                        exit 1
+                    fi
+                    echo -e "\033[1;31m ----> $1\033[0m"
+                    cd "$1"
+                else
+                    COMMAND="${1/-/_}"
+                    shift
+                    break
+                fi
                 ;;
         esac
         shift
@@ -753,14 +771,33 @@ function hgit_pull {
         echo "Pull changes from a remote."
         echo
         echo "Usage: hgit pull [-h|--help] [<remote> [<branch>]|$MASTER_BRANCH]"
+        echo "Usage: hgit pull [-r|--recursive]"
         echo
         echo "If remote and branch are both specified, we'll pull that branch from that remote."
         echo "If just the word '$MASTER_BRANCH' is given, we'll pull $MASTER_BRANCH *from origin*."
         echo "If we're on $MASTER_BRANCH, we'll pull $MASTER_BRANCH *from origin*."
         echo "In all other cases, we'll let git decide where to pull from."
+        echo
+        echo "Recusive mode will find nested repositories and do a pull in all of them. This will"
+        echo "only work when we're on the $MASTER_BRANCH branch and no other arguments are supplied."
         return
     fi
     CURR_BRANCH="$(hgit_branch)"
+    if [ "${1:-}" = "-r" ] || [ "${1:-}" = "--recursive" ]; then
+        if [ "$#" != 1 ]; then
+            echo "For recursive mode, no other arguments are valid (gave $#)."
+            exit 1
+        fi
+        if [ "$CURR_BRANCH" != "$MASTER_BRANCH" ]; then
+            echo "Recursive mode only works on $MASTER_BRANCH."
+            exit 1
+        fi
+        find -mindepth 2 -type d -iname '.git' | while read SUBDIR LOL; do
+            echo -e "\033[1;31m ----> $(dirname "$SUBDIR")\033[0m"
+            git -C "$(dirname "$SUBDIR")" pull --ff-only
+        done
+        echo -e "\033[1;31m ----> .\033[0m"
+    fi
     # How many args do we have?
     if [ -n "${1:-}" ] && [ -n "${2:-}" ]; then
         # Two args: remote and branch
@@ -768,10 +805,12 @@ function hgit_pull {
         BRANCH="$2"
     elif [ "${1:-}" = "$MASTER_BRANCH" ]; then
         # One arg == master
+        # we're probably on a feature branch and merging from master,
+        # make sure we pull from origin and not our fork
         REMOTE="origin"
         BRANCH="$MASTER_BRANCH"
     elif [ "$CURR_BRANCH" = "$MASTER_BRANCH" ]; then
-        # We're on master
+        # We're on master, make sure we pull from origin and not our fork
         REMOTE="origin"
         BRANCH="$MASTER_BRANCH"
     fi
