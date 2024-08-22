@@ -82,6 +82,8 @@ if [ "${RUNNING_IN_CI:-false}" = "false" ]; then
                 echo  " tag                   Create a tag and push it upstream."
                 echo  " tags                  List existing tags."
                 echo  " amend                 Amend stuff to the last commit, unless you pushed it already."
+                echo  " incoming, inc         Show changes on the remote side which would be merged locally by a pull."
+                echo  " outgoing, out         Show changes on the local side which would be pushed to the remote side."
                 echo  " push                  Push changes to a fork or upstream."
                 echo  " pull                  Pull changes from a fork or upstream."
                 echo  " pr                    Open a Pull Request."
@@ -869,6 +871,43 @@ function hgit_puhs {
 
 function hgit_spuh {
     hgit_push "$@"
+}
+
+
+# Incoming / Outgoing
+
+function hgit_incoming {
+    if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
+        echo "Show changes on the remote side which would be merged locally by a pull."
+        echo
+        echo "Usage: hgit incoming"
+        return
+    fi
+    CURR_BRANCH="$(hgit_branch)"
+    REMOTE="$(hgit_remote_for_branch "$CURR_BRANCH")"
+    git fetch --quiet "$REMOTE" "$CURR_BRANCH"
+    git log HEAD.."$REMOTE/$CURR_BRANCH"
+}
+
+function hgit_inc {
+    hgit_incoming "$@"
+}
+
+function hgit_outgoing {
+    if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
+        echo "Show changes on the local side which would be pushed to the remote side."
+        echo
+        echo "Usage: hgit outgoing"
+        return
+    fi
+    CURR_BRANCH="$(hgit_branch)"
+    REMOTE="$(hgit_remote_for_branch "$CURR_BRANCH")"
+    git fetch --quiet "$REMOTE" "$CURR_BRANCH"
+    git log "$REMOTE/$CURR_BRANCH"..HEAD
+}
+
+function hgit_out {
+    hgit_outgoing "$@"
 }
 
 # Log
