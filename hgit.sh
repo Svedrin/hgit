@@ -36,7 +36,7 @@ if [ "${RUNNING_IN_CI:-false}" = "false" ]; then
 
     while [ -n "${1:-}" ]; do
         case "$1" in
-            -h|--help)
+            -h|--help|help)
                 echo  "Human-friendly git."
                 echo
                 echo  "Usage: hgit [options] [subdir/] [command] [arguments]"
