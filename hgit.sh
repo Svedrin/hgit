@@ -73,7 +73,7 @@ if [ "${RUNNING_IN_CI:-false}" = "false" ]; then
                 echo  " commit, ci            Commit."
                 echo  " uncommit              Undo the last commit, unless you pushed it already. Does not"
                 echo  "                       modify your workdir, changes are uncommited but not undone."
-                echo  " backout               Given a commit ID, modify your workdir to prepare a commit"
+                echo  " undo, backout         Given a commit ID, modify your workdir to prepare a commit"
                 echo  "                       that inverts those changes, effectively undoing them. The"
                 echo  "                       result is not committed automatically, you can preview the"
                 echo  "                       changes and cherry-pick the ones you like before committing."
@@ -555,6 +555,10 @@ function hgit_backout {
         return
     fi
     git revert --no-commit "$@"
+}
+
+function hgit_undo {
+    hgit_backout "$@"
 }
 
 function hgit_tag {
