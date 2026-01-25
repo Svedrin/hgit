@@ -309,7 +309,7 @@ function hgit_status {
         echo "Usage: hgit status [-h|--help]"
         return
     fi
-    git status
+    git status "$@"
 }
 
 function hgit_st {
@@ -320,7 +320,7 @@ function hgit_st {
         echo "Usage: hgit st [-h|--help]"
         return
     fi
-    git status --short --branch
+    git status --short --branch "$@"
 }
 
 # Diff
