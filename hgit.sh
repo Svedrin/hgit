@@ -183,7 +183,7 @@ function hgit_init {
         echo "$REPO already is a git repository, not doing anything." >&2
         return 1
     fi
-    git init "$REPO"
+    git init "$REPO" --initial-branch="main"
 }
 
 function hgit_clone {
