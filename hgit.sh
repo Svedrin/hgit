@@ -184,6 +184,7 @@ function hgit_init {
         return 1
     fi
     git init "$REPO" --initial-branch="main"
+    echo 'MASTER_BRANCH="main"' > "$REPO/.git/hgitrc"
 }
 
 function hgit_clone {
