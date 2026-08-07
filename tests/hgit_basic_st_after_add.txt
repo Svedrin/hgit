@@ -1,2 +1,2 @@
-## No commits yet on master
+## No commits yet on main
 A  README.md

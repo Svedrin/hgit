@@ -71,6 +71,10 @@ function test_hgit_basic_workflow() {
     cp "$ROOTDIR/tests/README.md" "$TEMPDIR/repo"
     cd "$TEMPDIR/repo"
 
+    if [ -e ".git/hgitrc" ]; then
+        . ".git/hgitrc"
+    fi
+
     # diff the readme while it is still an unknown file.
     hgit_d  > "$TEMPDIR/d.txt"
     assert_file_empty "$TEMPDIR/d.txt"
@@ -133,9 +137,9 @@ function test_hgit_basic_workflow() {
     hgit_ci -m "modify stuff" > "$TEMPDIR/ci.txt"
     assert grep -q "0-feature-branch" "$TEMPDIR/ci.txt"
 
-    # Switch back to master
-    hgit_use master
-    assert [ "`hgit_branch`" = "master" ]
+    # Switch back to main
+    hgit_use main >/dev/null 2>&1
+    assert [ "`hgit_branch`" = "main" ]
 }
 
 run_test test_hgit_basic_workflow
