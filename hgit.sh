@@ -1362,11 +1362,41 @@ function hgit_cp {
     git add -- "$DEST"
 }
 
+# Remove <dir> and then each of its parents for as long as they are empty.
+# Directories are only a prefix to file names as far as hgit is concerned,
+# so once the last file is gone, the directory should be gone too. Never
+# touches the repo root or anything outside of it, and never removes
+# anything that isn't empty (so untracked and ignored files are safe).
+# With a second argument, stops after removing that directory.
+function hgit_prune_empty_dirs {
+    local root dir stop
+    root="$(realpath -m -- "$(git rev-parse --show-toplevel)")"
+    dir="$(realpath -m -- "$1")"
+    stop=""
+    if [ -n "${2:-}" ]; then
+        stop="$(realpath -m -- "$2")"
+    fi
+    while [[ "$dir" = "$root"/* ]]; do
+        rmdir -- "$dir" 2>/dev/null || return 0
+        if [ "$dir" = "$stop" ]; then
+            return 0
+        fi
+        dir="$(dirname -- "$dir")"
+    done
+}
+
 function hgit_mv {
     if [ -z "${1:-}" ] || [ -z "${2:-}" ] || [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
         echo "Move or rename a file or directory."
         echo
         echo "Usage: hgit mv [-A|--already] <source> <destination>"
+        echo
+        echo "Directories don't really exist as far as hgit is concerned, they are just"
+        echo "a prefix to file names. So the destination's directories are created as"
+        echo "needed, and directories that are empty after the move are removed."
+        echo
+        echo "The destination is taken to be a directory if it exists as one or ends"
+        echo "with a \`/\`, and the source is moved into it. Otherwise, it is the new name."
         echo
         echo "Specify -A or --already if you moved it already and now"
         echo "want to record that move in the repo."
@@ -1375,52 +1405,118 @@ function hgit_mv {
         echo "<source> argument."
         return
     fi
+    local ALREADY=false
     if [ "${1:-}" = "-A" ] || [ "${1:-}" = "--already" ]; then
-        SOURCE="$2"
-        DEST="$3"
-        # Undo the move first, so that we can then re-do it using "git mv".
-        if [ -e "$SOURCE" ]; then
-            echo "$SOURCE still exists. Not sure what that means, thus we'll abort."
+        ALREADY=true
+        shift
+        if [ -z "${2:-}" ]; then
+            echo "Usage: hgit mv -A <source> <destination>" >&2
             return 1
         fi
-        if [ -d "$DEST" ]; then
-            # $SOURCE now probably exists as "$DEST/$(basename "$SOURCE")".
-            MAYBE_DEST="$DEST/$(basename "$SOURCE")"
-            if [ -e "$MAYBE_DEST" ]; then
-                mv "$MAYBE_DEST" "$SOURCE"
+    fi
+    local SOURCE="$1"
+    local DEST="$2"
+    # Tab completion likes to add trailing slashes to directories. dirname and
+    # basename cope with those just fine, but the prefix-stripping in the
+    # --already handling below does not, so drop them (but keep a lone "/").
+    while [ "${#SOURCE}" -gt 1 ] && [[ "$SOURCE" = */ ]]; do
+        SOURCE="${SOURCE%/}"
+    done
+
+    # The source's parent directory is what may need cleaning up afterwards.
+    # Resolve it now, before anything moves, so that it doesn't matter where
+    # we are or how the path was spelled by then.
+    local SOURCE_PARENT
+    SOURCE_PARENT="$(realpath -m -- "$(dirname -- "$SOURCE")")"
+
+    # Where the thing currently lives, if it's not at $SOURCE. Only different
+    # for --already, where it needs to be moved back for a moment.
+    local CURRENT="$SOURCE"
+
+    if [ "$ALREADY" = true ]; then
+        # Undo the move first, so that we can then re-do it using "git mv".
+        # Check everything up front so we don't disturb the workdir needlessly.
+        if [ -e "$SOURCE" ] || [ -L "$SOURCE" ]; then
+            echo "$SOURCE still exists. Not sure what that means, thus we'll abort." >&2
+            return 1
+        fi
+        if [ -z "$(git ls-files -- "$SOURCE")" ]; then
+            echo "$SOURCE is not tracked by the repo, so there is no move to record." >&2
+            return 1
+        fi
+        if [ ! -e "$DEST" ] && [ ! -L "$DEST" ]; then
+            echo "$DEST does not exist, so there is no move to record." >&2
+            return 1
+        fi
+        if [ -d "$DEST" ] && [ ! -L "$DEST" ]; then
+            # Either $SOURCE was moved *into* $DEST, or renamed *to* $DEST.
+            # If $SOURCE was a file, it's the former. If it was a directory,
+            # look at where one of its tracked files went.
+            local INTO="$DEST/$(basename -- "$SOURCE")"
+            local SAMPLE REL
+            SAMPLE="$(git ls-files -- "$SOURCE" | head -n 1)"
+            REL="${SAMPLE#"$SOURCE"}"
+            if [ -z "$REL" ]; then
+                CURRENT="$INTO"
+            elif [ -e "$INTO$REL" ] && [ ! -e "$DEST$REL" ]; then
+                CURRENT="$INTO"
+            elif [ -e "$DEST$REL" ] && [ ! -e "$INTO$REL" ]; then
+                CURRENT="$DEST"
             else
-                mv "$DEST" "$SOURCE"
+                echo "Can't tell whether $SOURCE was moved into $DEST or renamed to it." >&2
+                echo "Move it back manually and run \`hgit mv $SOURCE $DEST\` instead." >&2
+                return 1
             fi
         else
-            mv "$DEST" "$SOURCE"
+            CURRENT="$DEST"
         fi
+        mkdir -p -- "$(dirname -- "$SOURCE")" || return 1
+        mv -- "$CURRENT" "$SOURCE" || return 1
     else
-        SOURCE="$1"
-        DEST="$2"
+        if [ ! -e "$SOURCE" ] && [ ! -L "$SOURCE" ]; then
+            echo "$SOURCE does not exist." >&2
+            return 1
+        fi
+        if [ -z "$(git ls-files -- "$SOURCE")" ]; then
+            echo "$SOURCE is not tracked by the repo. Use \`hgit add\` for that first," >&2
+            echo "or just \`mv\` it if the repo doesn't need to know." >&2
+            return 1
+        fi
     fi
+
     # Let's see if we need to mkdir the target directory first.
     # We will assume the "$DEST" to be a file name, UNLESS
     # * it points to a directory that exists, or
     # * it ends with a `/`.
-    if [ -d "$DEST" ] || [[ "$DEST" = */ ]]; then
-        # Directory!
-        mkdir -p "$DEST"
-    else
+    local DEST_DIR="$DEST"
+    if [ ! -d "$DEST" ] && [[ "$DEST" != */ ]]; then
         # Everything else is assumed to be a file name.
-        mkdir -p "$(dirname "$DEST")"
+        DEST_DIR="$(dirname -- "$DEST")"
     fi
-    # remember if the source arg pointed to a directory
-    SOURCE_IS_DIR="$([ -d "$SOURCE" ] && echo true || echo false)"
+    # Remember the topmost directory that we're about to create, so that we can
+    # take it (and only it) back should the move fail.
+    local CREATED_TOP=""
+    local PROBE="$DEST_DIR"
+    while [ ! -e "$PROBE" ] && [ ! -L "$PROBE" ]; do
+        CREATED_TOP="$PROBE"
+        PROBE="$(dirname -- "$PROBE")"
+    done
+    mkdir -p -- "$DEST_DIR" || return 1
+
     # Do the move
-    git mv "$SOURCE" "$DEST"
-    # If the source directory is now empty, delete it
-    RMDIR_TARGET="$SOURCE"
-    if [ "$SOURCE_IS_DIR" = false ]; then
-        RMDIR_TARGET="$(dirname "$SOURCE")"
+    if ! git mv -- "$SOURCE" "$DEST"; then
+        if [ "$ALREADY" = true ]; then
+            # Put things back the way we found them.
+            mkdir -p -- "$(dirname -- "$CURRENT")" && mv -- "$SOURCE" "$CURRENT" || true
+        fi
+        if [ -n "$CREATED_TOP" ]; then
+            hgit_prune_empty_dirs "$DEST_DIR" "$CREATED_TOP"
+        fi
+        return 1
     fi
-    if [ "$RMDIR_TARGET" != "." ]; then
-        rmdir -p --ignore-fail-on-non-empty "$(dirname "$RMDIR_TARGET")"
-    fi
+
+    # Directories that are empty now cease to exist.
+    hgit_prune_empty_dirs "$SOURCE_PARENT"
 }
 
 function hgit_rm {
