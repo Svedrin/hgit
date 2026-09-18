@@ -143,7 +143,9 @@ function test_hgit_basic_workflow() {
     assert diff "$TEMPDIR/dc.txt" "$ROOTDIR/tests/hgit_basic_d_after_modify.txt"
 
     # Try a commit while giving the name on command line (this must fail)
-    hgit_ci README.md -m "modify stuff" > "$TEMPDIR/ci-fail.txt"
+    RC=0
+    hgit_ci README.md -m "modify stuff" > "$TEMPDIR/ci-fail.txt" || RC=$?
+    assert [ "$RC" = "64" ]
     assert grep -q "aborting" "$TEMPDIR/ci-fail.txt"
 
     # Try a commit without any file names (this must work)
@@ -331,6 +333,50 @@ function test_hgit_st_and_status_show_stash() {
     run_git stash
     hgit_st > "$TEMPDIR/st.txt"
     assert grep -q "^Your stash currently has 2 entries$" "$TEMPDIR/st.txt"
+}
+
+function test_hgit_ci_mentions_leftover_stash_once_clean() {
+    mv_test_repo
+    run_git commit -m init
+    echo stashed >> a/h.txt
+    run_git stash
+
+    # Workdir is clean after this commit and the stash isn't empty.
+    echo one >> a/h.txt
+    hgit_ci -m "one" a/h.txt > "$TEMPDIR/ci.txt"
+    assert grep -q "workdir is clean now, but your stash still has 1 entry" "$TEMPDIR/ci.txt"
+
+    # Help and bad options don't commit anything, so no reminder, even though
+    # the workdir is clean and the stash isn't empty.
+    assert [ -z "`git status --porcelain`" ]
+    assert [ "`git stash list | wc -l`" = "1" ]
+    hgit_ci --help > "$TEMPDIR/ci.txt"
+    assert_fails grep -q "clean now" "$TEMPDIR/ci.txt"
+    RC=0
+    hgit_ci --nope > "$TEMPDIR/ci.txt" || RC=$?
+    assert [ "$RC" = "64" ]
+    assert_fails grep -q "clean now" "$TEMPDIR/ci.txt"
+
+    # Not clean after this one, so no reminder (h st does that).
+    echo two >> a/h.txt
+    echo other >> x/y.txt
+    hgit_ci -m "two" a/h.txt > "$TEMPDIR/ci.txt"
+    assert_fails grep -q "stash" "$TEMPDIR/ci.txt"
+
+    # Refused commits don't count.
+    echo staged >> a/h.txt
+    run_git add a/h.txt
+    git checkout -q x/y.txt
+    RC=0
+    hgit_ci -m "refused" a/h.txt > "$TEMPDIR/ci.txt" || RC=$?
+    assert [ "$RC" = "64" ]
+    assert grep -q "aborting" "$TEMPDIR/ci.txt"
+    assert_fails grep -q "stash" "$TEMPDIR/ci.txt"
+
+    # No stash, no reminder.
+    run_git stash drop
+    hgit_ci -m "three" > "$TEMPDIR/ci.txt"
+    assert_fails grep -q "stash" "$TEMPDIR/ci.txt"
 }
 
 # Set up a repo with one commit and some uncommitted work in it, and cd into it.
@@ -559,6 +605,7 @@ run_test test_hgit_mv_already
 run_test test_hgit_mv_already_dir_renamed_over_samename_child
 run_test test_hgit_mv_already_failure_restores_workdir
 run_test test_hgit_st_and_status_show_stash
+run_test test_hgit_ci_mentions_leftover_stash_once_clean
 run_test test_hgit_2nd_merges_back
 run_test test_hgit_2nd_default_name
 run_test test_hgit_2nd_starts_clean

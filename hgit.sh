@@ -138,6 +138,10 @@ fi
 
 # Helper functions
 
+# From sysexits.h: the command was used incorrectly, or refused because of what
+# was asked of it. Returned instead of 0 when we decline to do something.
+EX_USAGE=64
+
 function hgit_my_fork {
     echo "${MY_GITHUB_USER,,}"
 }
@@ -307,6 +311,17 @@ function hgit_co {
 
 # Status
 
+# "1 entry" / "3 entries" for what's in the stash, nothing if it's empty.
+function hgit_stash_summary {
+    local count
+    count="$(git stash list | wc -l)"
+    if [ "$count" = 1 ]; then
+        echo "1 entry"
+    elif [ "$count" -gt 1 ]; then
+        echo "$count entries"
+    fi
+}
+
 function hgit_status {
     if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
         echo "Show the current status of the working directory and which branch we're in."
@@ -332,11 +347,9 @@ function hgit_st {
     hgit_goto_context
     git status --short --branch "$@"
     # git ignores --show-stash in short format, so do it ourselves, in git's words.
-    STASHED="$(git stash list | wc -l)"
-    if [ "$STASHED" = 1 ]; then
-        echo "Your stash currently has 1 entry"
-    elif [ "$STASHED" -gt 1 ]; then
-        echo "Your stash currently has $STASHED entries"
+    STASHED="$(hgit_stash_summary)"
+    if [ -n "$STASHED" ]; then
+        echo "Your stash currently has $STASHED"
     fi
 }
 
@@ -402,7 +415,6 @@ function hgit_commit {
     hgit_goto_context
     hgit_commit_impl "$@"
 }
-
 function hgit_commit_impl {
     MESSAGE=""
     FILES=()
@@ -413,6 +425,9 @@ function hgit_commit_impl {
                 echo "Commit changes from the workdir. If no files are given, commits"
                 echo "whatever is currently in the staging area. See \`hgit diff-staging\`"
                 echo "to check what's in there."
+                echo
+                echo "If your workdir is clean afterwards but there are entries left in the"
+                echo "stash, you'll be reminded of that."
                 echo
                 echo "Usage: hgit commit [-m <commit message>] [files]"
                 echo
@@ -432,7 +447,7 @@ function hgit_commit_impl {
                 ;;
             -*)
                 echo "Unknown option $1"
-                return 1
+                return $EX_USAGE
                 ;;
             *)
                 FILES+=("$1")
@@ -442,13 +457,23 @@ function hgit_commit_impl {
     done
     if hgit_have_fork && [ "$(hgit_branch)" = "$MASTER_BRANCH" ]; then
         echo "You have a fork and you're commiting to $MASTER_BRANCH. You probably don't want to do that, aborting."
+        return $EX_USAGE
     elif [ "${#FILES[@]}" -gt 0 ] && git status --short -- "${FILES[@]}" | grep -q '^M'; then
         echo "There are changes in the staging area for some of the files also given on the command line (see h dc)."
         echo "This will probably commit more changes than you intend to - aborting."
+        return $EX_USAGE
     elif [ -n "$MESSAGE" ]; then
         git commit $PATCH -m "$MESSAGE" -- "${FILES[@]}"
     else
         git commit $PATCH -- "${FILES[@]}"
+    fi
+    # Only a commit that went through gets here: help and refusals return above,
+    # and a failing git commit stops us (errexit).
+    if [ -z "$(git status --porcelain)" ]; then
+        STASHED="$(hgit_stash_summary)"
+        if [ -n "$STASHED" ]; then
+            echo "Your workdir is clean now, but your stash still has $STASHED. Something left to commit or discard?"
+        fi
     fi
 }
 
