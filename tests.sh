@@ -23,6 +23,13 @@ function assert() {
     fi
 }
 
+function assert_fails() {
+    if "$@"; then
+        echo "Assertion failed, expected failure:" "$@"
+        return 1
+    fi
+}
+
 function assert_file_empty {
     assert [ "`<"$1" wc -l`" = "0" ]
 }
@@ -32,7 +39,13 @@ function run_test() {
     cd "$ROOTDIR"
     rm -f "$TEMPDIR/git-commands.txt"
     echo -n "$FUNC... "
-    if $FUNC; then
+    # Run in a subshell with errexit, so that the first failed assertion
+    # fails the test (errexit would be ignored inside of an `if`).
+    set +e
+    ( set -e; $FUNC )
+    RC=$?
+    set -e
+    if [ "$RC" = "0" ]; then
         echo "ok"
     else
         echo "failed"
