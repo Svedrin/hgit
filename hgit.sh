@@ -70,6 +70,8 @@ if [ "${RUNNING_IN_CI:-false}" = "false" ]; then
                 echo  " agent                 Create a branch + worktree and start an agent working in it."
                 echo  " join                  Wrap up an agent's branch: remove its sandboxes, merge it into"
                 echo  "                       $MASTER_BRANCH, then remove the worktree and branch."
+                echo  " secondscreen, 2nd     Do a quick side task in a temporary branch + worktree while your"
+                echo  "                       current changes stay uncommitted, then merge it back."
                 echo
                 echo  " diff, d               Diff workdir."
                 echo  " diff-staging, dc      Diff staging area (git diff --cached)."
@@ -1021,6 +1023,119 @@ function hgit_join {
 
     hgit_remove_worktree_if_any "$BRANCH"
     git branch -d "$BRANCH"
+}
+
+function hgit_secondscreen {
+    if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
+        echo "Do a quick side task on a clean checkout while your current changes are"
+        echo "still uncommitted: create a branch and git worktree, start a shell in it,"
+        echo "and merge the branch back once you're done."
+        echo
+        echo "Usage: hgit secondscreen [-h|--help] [<branch name>]"
+        echo "       hgit 2nd [-h|--help] [<branch name>]"
+        echo
+        echo "Creates a sibling worktree at ../<reponame>-2nd-<branch name>, on a new"
+        echo "branch of that name (branched from the branch you're on now, so it starts"
+        echo "out without your uncommitted changes), and starts a bash shell there. If"
+        echo "no branch name is given, it is called 2nd-<current branch>. If a worktree"
+        echo "for that branch already exists, resumes it."
+        echo
+        echo "Do your work, commit it, and exit the shell. If the worktree isn't clean"
+        echo "at that point, 'hgit st' is shown and you're sent back to the shell to"
+        echo "commit or revert whatever is left. Once it is clean, the branch is merged"
+        echo "into the branch you started from (fast-forward if possible), the worktree"
+        echo "is removed and the branch is deleted."
+        echo
+        echo "Your uncommitted changes in the original checkout are stashed for the"
+        echo "merge and restored afterwards. If they clash with what was merged, you'll"
+        echo "find conflict markers in your files, and the stash entry is kept until you"
+        echo "'git stash drop' it. The worktree and branch are cleaned up regardless, as"
+        echo "the merge itself worked."
+        echo
+        echo "If the merge itself fails (conflicts because your branch moved on in the"
+        echo "meantime, or you only have staged changes, which git won't merge around"
+        echo "unless it's a fast-forward), the worktree and the branch are kept. Sort it"
+        echo "out in the original checkout (if your changes ended up in the stash,"
+        echo "'git stash pop' them afterwards), then run 'hgit 2nd <branch name>' again"
+        echo "and exit the shell to clean up."
+        echo
+        echo "If you want to throw away the changes instead of merging them, run"
+        echo "'hgit kill <branch name>'."
+        return
+    fi
+
+    ORIG_WT="$(git rev-parse --show-toplevel)"
+    ORIG_BRANCH="$(git symbolic-ref --short -q HEAD || true)"
+    if [ -z "$ORIG_BRANCH" ]; then
+        echo "Not on a branch (detached HEAD), don't know what to merge back into, aborting." >&2
+        return 1
+    fi
+
+    BRANCH="${1:-2nd-$ORIG_BRANCH}"
+    if [ "$BRANCH" = "$ORIG_BRANCH" ]; then
+        echo "$BRANCH is the branch we're on right now, pick a different name." >&2
+        return 1
+    fi
+    WT_DIR="$(dirname "$ORIG_WT")/$(basename "$ORIG_WT")-2nd-${BRANCH//\//-}"
+
+    EXISTING="$(hgit_worktree_path_for_branch "$BRANCH")"
+    if [ -n "$EXISTING" ]; then
+        WT_DIR="$EXISTING"
+        echo "Worktree for $BRANCH already exists at $WT_DIR, resuming."
+    elif [ -e "$WT_DIR" ]; then
+        echo "$WT_DIR already exists but is not a worktree for $BRANCH, aborting." >&2
+        return 1
+    elif git branch -l | cut -c3- | grep -q "^$BRANCH\$"; then
+        git worktree add "$WT_DIR" "$BRANCH"
+    else
+        git worktree add -b "$BRANCH" "$WT_DIR" "$ORIG_BRANCH"
+    fi
+
+    echo "Starting a shell in $WT_DIR (branch $BRANCH)."
+    echo "Exit the shell once you're done to merge back into $ORIG_BRANCH."
+    while true; do
+        (cd "$WT_DIR" && bash) || true
+        if [ -z "$(git -C "$WT_DIR" status --porcelain)" ]; then
+            break
+        fi
+        echo
+        echo "The worktree at $WT_DIR is not clean:"
+        (cd "$WT_DIR" && hgit_st)
+        echo "Commit or revert the rest, then exit the shell again to merge back."
+        echo
+    done
+
+    if [ "$(git -C "$ORIG_WT" symbolic-ref --short -q HEAD || true)" != "$ORIG_BRANCH" ]; then
+        echo "$ORIG_WT is no longer on $ORIG_BRANCH, not merging. The worktree and branch $BRANCH are kept." >&2
+        return 1
+    fi
+    cd "$ORIG_WT"
+    # hgit_with_stash swallows the exit status of the merge, so judge by the
+    # outcome instead: was the branch merged, and did a stash entry stay behind
+    # because it didn't apply cleanly?
+    STASHES_BEFORE="$(git stash list | wc -l)"
+    hgit_with_stash git merge --no-edit "$BRANCH" || true
+    STASH_LEFT="$(( $(git stash list | wc -l) - STASHES_BEFORE ))"
+
+    if ! git merge-base --is-ancestor "$BRANCH" HEAD; then
+        echo "Merging $BRANCH into $ORIG_BRANCH failed. The worktree at $WT_DIR and the branch are kept." >&2
+        if [ "$STASH_LEFT" -gt 0 ]; then
+            echo "Your uncommitted changes are safe in the stash, run 'git stash pop' once the merge is sorted out." >&2
+        fi
+        echo "Sort things out in $ORIG_WT, then run 'hgit 2nd $BRANCH' again and exit the shell to clean up." >&2
+        return 1
+    fi
+
+    hgit_remove_worktree_if_any "$BRANCH"
+    git branch -d "$BRANCH"
+    if [ "$STASH_LEFT" -gt 0 ]; then
+        echo "Your uncommitted changes conflict with the merged ones, see the conflict markers in the files above." >&2
+        echo "Once resolved, 'git stash drop' removes the stash entry that was kept." >&2
+    fi
+}
+
+function hgit_2nd {
+    hgit_secondscreen "$@"
 }
 
 # Push/pull

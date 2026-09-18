@@ -313,6 +313,140 @@ function test_hgit_mv_already_failure_restores_workdir() {
     assert_exists x/y.txt
 }
 
+# Set up a repo with one commit and some uncommitted work in it, and cd into it.
+function secondscreen_test_repo() {
+    rm -rf "$TEMPDIR/2nd" "$TEMPDIR/2nd-2nd-side"*
+    mkdir "$TEMPDIR/2nd"
+    cd "$TEMPDIR/2nd"
+    run_git init .
+    echo 1 > f.txt
+    echo 1 > g.txt
+    run_git add -A
+    run_git commit -m init
+    # Uncommitted work: one modified, one staged, one untracked file.
+    echo wip > g.txt
+    echo new > staged.txt
+    run_git add staged.txt
+    echo untracked > u.txt
+}
+
+function assert_no_branch {
+    assert_fails "`which git`" rev-parse --verify --quiet "refs/heads/$1" >/dev/null
+}
+
+function test_hgit_2nd_merges_back() {
+    secondscreen_test_repo
+    printf 'echo side > side.txt\ngit add side.txt\ngit commit -qm side\nexit\n' \
+        | hgit_2nd side > "$TEMPDIR/2nd.txt" 2>&1
+    # The side task is merged into our branch, and cleaned up.
+    assert_exists side.txt
+    assert_gone "$TEMPDIR/2nd-2nd-side"
+    assert_no_branch side
+    assert [ "`hgit_branch`" = "master" ]
+    # Our uncommitted work is untouched.
+    assert [ "`cat g.txt`" = "wip" ]
+    assert_staged "A  staged.txt"
+    assert_exists u.txt
+}
+
+function test_hgit_2nd_default_name() {
+    secondscreen_test_repo
+    printf 'echo side > side.txt\ngit add side.txt\ngit commit -qm side\nexit\n' \
+        | hgit_2nd > "$TEMPDIR/2nd.txt" 2>&1
+    assert_exists side.txt
+    assert_no_branch 2nd-master
+}
+
+function test_hgit_2nd_starts_clean() {
+    secondscreen_test_repo
+    # None of our uncommitted work shows up in the second screen. Nothing to
+    # commit there, so merging is a no-op.
+    printf 'test ! -e u.txt && test ! -e staged.txt && test "$(cat g.txt)" = 1\nexit\n' \
+        | hgit_2nd side > "$TEMPDIR/2nd.txt" 2>&1
+    assert_gone "$TEMPDIR/2nd-2nd-side"
+    assert_no_branch side
+}
+
+function test_hgit_2nd_dirty_worktree_goes_back_to_shell() {
+    secondscreen_test_repo
+    # First session leaves an untracked file behind, second one removes it again.
+    printf 'echo junk > junk.txt\nexit\nrm junk.txt\necho side > side.txt\ngit add side.txt\ngit commit -qm side\nexit\n' \
+        | hgit_2nd side > "$TEMPDIR/2nd.txt" 2>&1
+    assert grep -q "not clean" "$TEMPDIR/2nd.txt"
+    assert grep -q -- "?? junk.txt" "$TEMPDIR/2nd.txt"
+    assert_exists side.txt
+    assert_no_branch side
+}
+
+function test_hgit_2nd_wip_conflicting_with_merge_leaves_markers() {
+    secondscreen_test_repo
+    # The side task touches a file we have uncommitted changes in. The merge
+    # itself works, so everything is cleaned up, but our changes are left
+    # with conflict markers and the stash entry is kept.
+    printf 'echo side > g.txt\ngit commit -qam side\nexit\n' \
+        | hgit_2nd side > "$TEMPDIR/2nd.txt" 2>&1
+    assert grep -q "conflict" "$TEMPDIR/2nd.txt"
+    assert grep -q "<<<<<<<" g.txt
+    assert grep -q "wip" g.txt
+    assert grep -q "side" g.txt
+    assert [ "`git stash list | wc -l`" = "1" ]
+    assert_gone "$TEMPDIR/2nd-2nd-side"
+    assert_no_branch side
+}
+
+function test_hgit_2nd_keeps_worktree_if_merge_fails() {
+    secondscreen_test_repo
+    # Our branch moves on while we're in the second screen, and the two
+    # changes conflict.
+    printf 'echo side > f.txt\ngit commit -qam side\necho main > "%s/f.txt"\ngit -C "%s" commit -qm main -- f.txt\nexit\n' \
+        "$TEMPDIR/2nd" "$TEMPDIR/2nd" \
+        | assert_fails hgit_2nd side > "$TEMPDIR/2nd.txt" 2>&1
+    assert grep -q "failed" "$TEMPDIR/2nd.txt"
+    assert grep -q "git stash pop" "$TEMPDIR/2nd.txt"
+    assert_exists "$TEMPDIR/2nd-2nd-side"
+    assert "`which git`" rev-parse --verify --quiet refs/heads/side >/dev/null
+    assert grep -q "<<<<<<<" f.txt
+    # The merge blocks popping our changes, they wait in the stash.
+    assert [ "`git stash list | wc -l`" = "1" ]
+
+    # Resolve the merge, get our changes back and retry, which resumes the
+    # worktree and cleans up.
+    echo resolved > f.txt
+    run_git commit -am "merge side"
+    run_git stash pop
+    printf 'exit\n' | hgit_2nd side > "$TEMPDIR/2nd.txt" 2>&1
+    assert grep -q "resuming" "$TEMPDIR/2nd.txt"
+    assert [ "`cat f.txt`" = "resolved" ]
+    assert [ "`cat g.txt`" = "wip" ]
+    assert_gone "$TEMPDIR/2nd-2nd-side"
+    assert_no_branch side
+}
+
+function test_hgit_2nd_keeps_worktree_if_merge_is_refused() {
+    secondscreen_test_repo
+    # Nothing but staged changes: hgit_with_stash finds nothing modified to
+    # stash. Our branch moves on while we're in the second screen, so the merge
+    # is not a fast-forward, and git refuses to do it with staged changes around.
+    run_git checkout g.txt
+    printf 'echo side > side.txt\ngit add side.txt\ngit commit -qm side\necho main > "%s/f.txt"\ngit -C "%s" commit -qm main -- f.txt\nexit\n' \
+        "$TEMPDIR/2nd" "$TEMPDIR/2nd" \
+        | assert_fails hgit_2nd side > "$TEMPDIR/2nd.txt" 2>&1
+    assert_exists "$TEMPDIR/2nd-2nd-side"
+    assert "`which git`" rev-parse --verify --quiet refs/heads/side >/dev/null
+    # Our uncommitted changes are back where they were.
+    assert [ "`cat g.txt`" = "1" ]
+    assert_staged "A  staged.txt"
+    assert [ "`git stash list | wc -l`" = "0" ]
+}
+
+function test_hgit_2nd_refuses_current_branch_and_detached_head() {
+    secondscreen_test_repo
+    assert_fails hgit_2nd master 2>/dev/null
+    run_git checkout --detach
+    assert_fails hgit_2nd side 2>/dev/null
+    assert_gone "$TEMPDIR/2nd-2nd-side"
+}
+
 run_test test_hgit_basic_workflow
 run_test test_hgit_mv_file_prunes_empty_dirs
 run_test test_hgit_mv_into_dir
@@ -323,3 +457,11 @@ run_test test_hgit_mv_from_subdir_and_outside
 run_test test_hgit_mv_already
 run_test test_hgit_mv_already_dir_renamed_over_samename_child
 run_test test_hgit_mv_already_failure_restores_workdir
+run_test test_hgit_2nd_merges_back
+run_test test_hgit_2nd_default_name
+run_test test_hgit_2nd_starts_clean
+run_test test_hgit_2nd_dirty_worktree_goes_back_to_shell
+run_test test_hgit_2nd_wip_conflicting_with_merge_leaves_markers
+run_test test_hgit_2nd_keeps_worktree_if_merge_fails
+run_test test_hgit_2nd_keeps_worktree_if_merge_is_refused
+run_test test_hgit_2nd_refuses_current_branch_and_detached_head

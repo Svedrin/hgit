@@ -458,6 +458,46 @@ Fast-forward
 
 If the merge fails, for example because of conflicts, `h join` keeps the worktree and the branch. Resolve the conflicts by hand and run it again.
 
+## Doing something else in between
+
+You've changed a bunch of things, and now you notice that you'd really like to do this one tiny other thing first, but it needs a clean worktree. `h 2nd [<branch name>]` (or `h secondscreen`) gives you one, without making you commit or stash your half-finished work:
+
+```
+# h 2nd fix-typo
+Preparing worktree (new branch 'fix-typo')
+Starting a shell in /home/me/hgit-2nd-fix-typo (branch fix-typo).
+Exit the shell once you're done to merge back into master.
+# vi README.md
+# h ci -m "fix a typo" README.md
+[fix-typo 3f4e5d6] fix a typo
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+# exit
+Updating b329869..3f4e5d6
+Fast-forward
+ README.md | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+Deleted branch fix-typo (was 3f4e5d6).
+```
+
+Like `h agent`, this creates a branch and a worktree next to your repo, at `../hgit-2nd-fix-typo`. The branch starts from the branch you're on now, so it doesn't contain your uncommitted changes. Instead of an agent, it starts a `bash` shell there. If you leave out the branch name, it's called `2nd-<current branch>`.
+
+Do your work, commit it, and exit the shell. If the worktree isn't clean at that point, `h st` is shown and you're sent straight back into the shell to commit or revert whatever is left:
+
+```
+# exit
+
+The worktree at /home/me/hgit-2nd-fix-typo is not clean:
+## fix-typo
+?? notes.txt
+Commit or revert the rest, then exit the shell again to merge back.
+```
+
+Once the worktree is clean, the branch is merged back into the branch you started from, as a fast-forward if possible. Then the worktree is removed and the branch is deleted, and you can carry on with your uncommitted changes, which have not been touched.
+
+For the merge, your uncommitted changes are stashed and restored afterwards, like `h use` does it. If they clash with what was merged, you'll find conflict markers in your files, right on the branch you're working on. The stash entry is kept until you `git stash drop` it. The worktree and branch are cleaned up in this case too, since the merge itself worked.
+
+If the merge itself fails, `h 2nd` keeps the worktree and the branch. This happens with conflicts, when your branch moved on while you were in the second screen, or when you only have staged changes and the merge isn't a fast-forward. In that case, sort things out in your main checkout. If your uncommitted changes ended up in the stash because of a conflicted merge, `git stash pop` them once you've committed the merge. Then run `h 2nd fix-typo` again, which resumes the worktree, and exit the shell right away to clean up. `h kill fix-typo` throws it all away instead.
+
 
 # Notable differences between `hgit` and `git`
 
