@@ -966,7 +966,7 @@ function hgit_join {
         echo "any sandboxes whose workspace is that worktree ('sbx list --json' / 'sbx"
         echo "rm'). Then switches the main checkout to $MASTER_BRANCH and merges <branch"
         echo "name> into it (fast-forward if possible). If the merge succeeds, the"
-        echo "worktree is removed and the branch is deleted, same as 'hgit kill' would."
+        echo "worktree is removed and the branch is deleted."
         echo
         echo "If the merge fails (e.g. conflicts), nothing is cleaned up - resolve things"
         echo "by hand (in the worktree, or after a plain 'git merge $1' in the main"
