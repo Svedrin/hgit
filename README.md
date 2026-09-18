@@ -406,6 +406,58 @@ will avoid pulling unrelated branches into your local working copy that you are 
 
 Now you can make changes and, like before, use a plain `h push` to push them back into their fork.
 
+## Running an agent on its own branch
+
+`h agent <branch name>` creates a branch, checks it out in a new worktree next to your repo, and starts an agent there, so it can work without disturbing your main checkout.
+
+```
+# h agent fix-flaky-test
+Preparing worktree (new branch 'fix-flaky-test')
+HEAD is now at b329869 init
+```
+
+This creates the worktree at `../hgit-agent-fix-flaky-test`, switches into it, and runs the agent command. Configure that command with `AGENT_CMD` in `.git/hgitrc`:
+
+```
+AGENT_CMD="claude"
+```
+
+If `AGENT_CMD` is unset, `hgit` runs `claude` when it's installed. Otherwise it asks which command to run, and wraps that command in `sbx run` if `sbx` is on your `PATH`.
+
+Open a second terminal in your main checkout while the agent works. `h st`, `h diff`, `h ci`, `h push`, `h pull`, `h pr`, `h log`, `h incoming`, and `h outgoing` operate on the agent's worktree instead, without needing to `cd` anywhere:
+
+```
+# h st
+## fix-flaky-test
+ M tests/test_something.py
+# h diff
+diff --git tests/test_something.py tests/test_something.py
+index 83b3766..d677ecc 100644
+--- tests/test_something.py
++++ tests/test_something.py
+@@ -1 +1 @@
+-def test_x(): pass
++def test_x(): assert True
+# h ci -m "fix the flaky test" tests/test_something.py
+[fix-flaky-test 2ba6b46] fix the flaky test
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+```
+
+Run `h use fix-flaky-test` from your main checkout to point these commands at that worktree again, or `h use master` to point them back at your own checkout. `h kill fix-flaky-test` removes both the worktree and the branch.
+
+When the agent is done, run `h join fix-flaky-test`. If `sbx` is installed, it first removes the sandboxes running on that worktree, using `sbx list --json` and `sbx rm`. It then merges the branch into `master`, as a fast-forward if possible. If the merge succeeds, it removes the worktree and deletes the branch.
+
+```
+# h join fix-flaky-test
+Removing sandbox claude-hgit-agent-fix-flaky-test...
+Updating b329869..2ba6b46
+Fast-forward
+ tests/test_something.py | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+```
+
+If the merge fails, for example because of conflicts, `h join` keeps the worktree and the branch. Resolve the conflicts by hand and run it again.
+
 
 # Notable differences between `hgit` and `git`
 

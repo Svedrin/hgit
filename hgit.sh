@@ -67,6 +67,9 @@ if [ "${RUNNING_IN_CI:-false}" = "false" ]; then
                 echo  " use                   Switch to an existing branch, even if it only exists in your"
                 echo  "                       fork but not yet locally."
                 echo  " kill                  Delete a branch."
+                echo  " agent                 Create a branch + worktree and start an agent working in it."
+                echo  " join                  Wrap up an agent's branch: remove its sandboxes, merge it into"
+                echo  "                       $MASTER_BRANCH, then remove the worktree and branch."
                 echo
                 echo  " diff, d               Diff workdir."
                 echo  " diff-staging, dc      Diff staging area (git diff --cached)."
@@ -310,6 +313,7 @@ function hgit_status {
         echo "Usage: hgit status [-h|--help]"
         return
     fi
+    hgit_goto_context
     git status "$@"
 }
 
@@ -321,6 +325,7 @@ function hgit_st {
         echo "Usage: hgit st [-h|--help]"
         return
     fi
+    hgit_goto_context
     git status --short --branch "$@"
 }
 
@@ -360,6 +365,7 @@ function hgit_diff {
         esac
         shift
     done
+    hgit_goto_context
     if [ -n "$COMMIT" ]; then
         git diff --no-prefix $OPTS "$COMMIT^" "$COMMIT" -- "${FILES[@]}"
     else
@@ -382,6 +388,11 @@ function hgit_dc {
 # Commit
 
 function hgit_commit {
+    hgit_goto_context
+    hgit_commit_impl "$@"
+}
+
+function hgit_commit_impl {
     MESSAGE=""
     FILES=()
     PATCH=""
@@ -614,6 +625,107 @@ function hgit_with_stash {
     fi
 }
 
+# Worktrees (used for agent workflows)
+
+function hgit_main_worktree_path {
+    git worktree list --porcelain | while read -r key val; do
+        if [ "$key" = "worktree" ]; then
+            echo "$val"
+            break
+        fi
+    done
+}
+
+function hgit_worktree_path_for_branch {
+    local branch="$1" wt=""
+    while read -r key val; do
+        case "$key" in
+            worktree)
+                wt="$val"
+                ;;
+            branch)
+                if [ "$val" = "refs/heads/$branch" ]; then
+                    echo "$wt"
+                    return
+                fi
+                ;;
+        esac
+    done < <(git worktree list --porcelain)
+}
+
+function hgit_context_file {
+    local common
+    common="$(git rev-parse --git-common-dir 2>/dev/null || true)"
+    if [ -z "$common" ]; then
+        return 1
+    fi
+    echo "$(realpath "$common")/hgit-worktree"
+}
+
+function hgit_goto_context {
+    local ctxfile ctx here main
+    here="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+    main="$(hgit_main_worktree_path)"
+    if [ -n "$here" ] && [ -n "$main" ] && [ "$here" != "$main" ]; then
+        # We're already inside a worktree of our own (e.g. an agent's) - never
+        # get redirected away from it just because some other tab pointed the
+        # shared context marker elsewhere.
+        return
+    fi
+    ctxfile="$(hgit_context_file 2>/dev/null || true)"
+    if [ -z "$ctxfile" ] || [ ! -f "$ctxfile" ]; then
+        return
+    fi
+    ctx="$(cat "$ctxfile")"
+    if [ -n "$ctx" ] && [ -d "$ctx" ]; then
+        cd "$ctx"
+    else
+        rm -f "$ctxfile"
+    fi
+}
+
+function hgit_set_context {
+    local ctxfile
+    ctxfile="$(hgit_context_file)"
+    echo "$1" > "$ctxfile"
+}
+
+function hgit_clear_context {
+    local ctxfile
+    ctxfile="$(hgit_context_file 2>/dev/null || true)"
+    if [ -n "$ctxfile" ]; then
+        rm -f "$ctxfile"
+    fi
+}
+
+function hgit_switch_to_branch {
+    local branch="$1" wt
+    wt="$(hgit_worktree_path_for_branch "$branch")"
+    if [ -n "$wt" ] && [ "$wt" != "$(git rev-parse --show-toplevel)" ]; then
+        hgit_set_context "$wt"
+        echo "$branch is checked out in a worktree at $wt - other commands will operate there until you 'hgit use' something else."
+    else
+        hgit_clear_context
+        hgit_with_stash git checkout "$branch"
+    fi
+}
+
+function hgit_remove_worktree_if_any {
+    local branch="$1" wt ctxfile ctx
+    wt="$(hgit_worktree_path_for_branch "$branch")"
+    if [ -z "$wt" ]; then
+        return
+    fi
+    git worktree remove "$wt"
+    ctxfile="$(hgit_context_file 2>/dev/null || true)"
+    if [ -n "$ctxfile" ] && [ -f "$ctxfile" ]; then
+        ctx="$(cat "$ctxfile")"
+        if [ "$ctx" = "$wt" ]; then
+            rm -f "$ctxfile"
+        fi
+    fi
+}
+
 function hgit_use {
     if [ -z "${1:-}" ] || [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
         echo "Find and switch to an existing branch."
@@ -623,6 +735,11 @@ function hgit_use {
         echo "If switching to '$MASTER_BRANCH' and a fork exists, an implicit"
         echo "sync is performed to remove local branches that have been"
         echo "deleted in the fork (e.g. after a PR is merged)."
+        echo
+        echo "If the branch is already checked out in another worktree (see"
+        echo "'hgit agent'), we won't touch this working directory - instead,"
+        echo "st/diff/commit/push/pull/pr/log/incoming/outgoing will operate"
+        echo "on that worktree until you 'hgit use' a branch without one."
         return
     fi
     if [ "$MASTER_BRANCH" != "master" ] && [ "$1" = "master" ]; then
@@ -650,6 +767,7 @@ function hgit_use {
     fi
     # Are we explicitly checking out master?
     if [ "$SEARCH" = "$MASTER_BRANCH" ]; then
+        hgit_clear_context
         hgit_with_stash git checkout "$MASTER_BRANCH"
         # If we don't have a remote for master, we're done
         if [ -z "$(hgit_remote_for_branch "$MASTER_BRANCH")" ]; then
@@ -661,9 +779,11 @@ function hgit_use {
         fi
         # pull from upstream
         hgit_with_stash git pull
-        # Prune merged branches locally so that they are removed from git config
+        # Prune merged branches locally so that they are removed from git config.
+        # Branches checked out in a worktree are left alone (git would refuse to
+        # delete them anyway) - use `hgit kill` to remove those explicitly.
         for branch in $(git branch --merged "$MASTER_BRANCH" | cut -c 3-); do
-            if [ "$branch" != "$MASTER_BRANCH" ]; then
+            if [ "$branch" != "$MASTER_BRANCH" ] && [ -z "$(hgit_worktree_path_for_branch "$branch")" ]; then
                 git branch -d "$branch"
             fi
         done
@@ -675,7 +795,7 @@ function hgit_use {
         if [ "${CANDIDATES[0]}" = "$MASTER_BRANCH" ]; then
             hgit_use "$MASTER_BRANCH"
         else
-            hgit_with_stash git checkout "${CANDIDATES[0]}"
+            hgit_switch_to_branch "${CANDIDATES[0]}"
         fi
     elif [ "${#CANDIDATES[*]}" -gt "1" ]; then
         echo "Found multiple branches, please make your search term more specific:"
@@ -687,7 +807,7 @@ function hgit_use {
         CANDIDATES=($(git ls-remote --heads "$REMOTE" | cut -d/ -f3- | grep "$SEARCH" || true))
         if [ "${#CANDIDATES[*]}" = "1" ]; then
             git fetch "$REMOTE" "${CANDIDATES[0]}"
-            hgit_with_stash git checkout "${CANDIDATES[0]}"
+            hgit_switch_to_branch "${CANDIDATES[0]}"
         elif [ "${#CANDIDATES[*]}" -gt "1" ]; then
             echo "Found multiple branches, please make your search term more specific:"
             for CAND in "${CANDIDATES[@]}"; do
@@ -754,6 +874,8 @@ function hgit_kill {
         echo "Delete a branch."
         echo
         echo "Usage: hgit kill [-h|--help] <branch name|--all>"
+        echo
+        echo "If the branch has a worktree (see 'hgit agent'), it is removed first."
         return
     fi
     hgit_use "$MASTER_BRANCH"
@@ -763,12 +885,126 @@ function hgit_kill {
     elif [ "$1" = "--all-yes-sure" ]; then
         for branch in $(git branch -l | cut -c 3-); do
             if [ "$branch" != "$MASTER_BRANCH" ]; then
+                hgit_remove_worktree_if_any "$branch"
                 git branch -D "$branch"
             fi
         done
     else
+        hgit_remove_worktree_if_any "$1"
         git branch -D "$1"
     fi
+}
+
+function hgit_agent {
+    if [ -z "${1:-}" ] || [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
+        echo "Create (or resume) a branch and git worktree for an agent to work in, and"
+        echo "start the agent there in this terminal."
+        echo
+        echo "Usage: hgit agent [-h|--help] <branch name>"
+        echo
+        echo "Creates a sibling worktree at ../<reponame>-agent-<branch name>, on a new"
+        echo "branch of the same name (branched from $MASTER_BRANCH), and starts the"
+        echo "agent there. If a worktree for that branch already exists, resumes it."
+        echo
+        echo "From another terminal, plain 'hgit st'/'diff'/'commit'/'push'/'pull'/'pr'/"
+        echo "'log'/'incoming'/'outgoing' run from the main working directory will"
+        echo "automatically operate on this worktree instead, until you 'hgit use' a"
+        echo "branch that doesn't have one."
+        echo
+        echo "The command used to start the agent is configurable via AGENT_CMD in"
+        echo ".git/hgitrc, e.g.:"
+        echo
+        echo "  echo 'AGENT_CMD=\"claude\"' >> .git/hgitrc"
+        echo
+        echo "If unset, defaults to 'claude' when it's installed; otherwise you'll be"
+        echo "asked which command to run (wrapped in 'sbx run' if sbx is installed)."
+        return
+    fi
+
+    BRANCH="$1"
+    MAIN_WT="$(hgit_main_worktree_path)"
+    WT_DIR="$(dirname "$MAIN_WT")/$(basename "$MAIN_WT")-agent-$BRANCH"
+
+    EXISTING="$(hgit_worktree_path_for_branch "$BRANCH")"
+    if [ -n "$EXISTING" ]; then
+        WT_DIR="$EXISTING"
+        echo "Worktree for $BRANCH already exists at $WT_DIR, resuming."
+    elif [ -e "$WT_DIR" ]; then
+        echo "$WT_DIR already exists but is not a worktree for $BRANCH, aborting." >&2
+        return 1
+    elif git branch -l | cut -c3- | grep -q "^$BRANCH\$"; then
+        git -C "$MAIN_WT" worktree add "$WT_DIR" "$BRANCH"
+    else
+        git -C "$MAIN_WT" worktree add -b "$BRANCH" "$WT_DIR" "$MASTER_BRANCH"
+    fi
+
+    hgit_set_context "$WT_DIR"
+    cd "$WT_DIR"
+
+    if [ -z "${AGENT_CMD:-}" ] && command -v claude &>/dev/null; then
+        AGENT_CMD="claude"
+    else
+        echo -n "claude not found and no AGENT_CMD configured. What agent command should I run? "
+        read -r AGENT_CMD
+    fi
+    if command -v sbx &>/dev/null; then
+        exec sbx run "$AGENT_CMD" . "$MAIN_WT" -- $AGENT_ARGS
+    else
+        exec "$AGENT_CMD" $AGENT_ARGS
+    fi
+}
+
+function hgit_join {
+    if [ -z "${1:-}" ] || [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
+        echo "Wrap up an agent's branch (see 'hgit agent'): remove any sandboxes running"
+        echo "on its worktree, merge the branch into $MASTER_BRANCH, then remove the"
+        echo "worktree and delete the branch."
+        echo
+        echo "Usage: hgit join [-h|--help] <branch name>"
+        echo
+        echo "Looks up the worktree for <branch name>, and if 'sbx' is installed, removes"
+        echo "any sandboxes whose workspace is that worktree ('sbx list --json' / 'sbx"
+        echo "rm'). Then switches the main checkout to $MASTER_BRANCH and merges <branch"
+        echo "name> into it (fast-forward if possible). If the merge succeeds, the"
+        echo "worktree is removed and the branch is deleted, same as 'hgit kill' would."
+        echo
+        echo "If the merge fails (e.g. conflicts), nothing is cleaned up - resolve things"
+        echo "by hand (in the worktree, or after a plain 'git merge $1' in the main"
+        echo "checkout), then retry."
+        return
+    fi
+
+    BRANCH="$1"
+    MAIN_WT="$(hgit_main_worktree_path)"
+    WT_DIR="$(hgit_worktree_path_for_branch "$BRANCH")"
+
+    if [ -z "$WT_DIR" ]; then
+        echo "No worktree found for $BRANCH, aborting." >&2
+        return 1
+    fi
+
+    cd "$MAIN_WT"
+
+    if command -v sbx &>/dev/null; then
+        if command -v jq &>/dev/null; then
+            SANDBOXES="$(sbx list --json 2>/dev/null | jq -r --arg wt "$WT_DIR" '.sandboxes[]? | select(.workspaces[]? == $wt) | .name')"
+            for SANDBOX in $SANDBOXES; do
+                echo "Removing sandbox $SANDBOX..."
+                sbx rm "$SANDBOX"
+            done
+        else
+            sbx list | grep "$WT_DIR" | while read SANDBOX _; do
+                echo "Removing sandbox $SANDBOX..."
+                sbx rm "$SANDBOX"
+            done
+        fi
+    fi
+
+    hgit_with_stash git checkout "$MASTER_BRANCH"
+    git merge "$BRANCH"
+
+    hgit_remove_worktree_if_any "$BRANCH"
+    git branch -d "$BRANCH"
 }
 
 # Push/pull
@@ -789,6 +1025,7 @@ function hgit_pull {
         echo "only work when we're on the $MASTER_BRANCH branch and no other arguments are supplied."
         return
     fi
+    hgit_goto_context
     CURR_BRANCH="$(hgit_branch)"
     if [ "${1:-}" = "-r" ] || [ "${1:-}" = "--recursive" ]; then
         if [ "$#" != 1 ]; then
@@ -841,6 +1078,7 @@ function hgit_push {
         echo "If remote is not specified and we're not on $MASTER_BRANCH and we do not have a fork, we'll push to origin."
         return
     fi
+    hgit_goto_context
     CURR_BRANCH="$(hgit_branch)"
     # To see if we need to --set-upstream, find out which remote the current branch is tracking
     SET_UPSTREAM=""
@@ -888,6 +1126,7 @@ function hgit_incoming {
         echo "Usage: hgit incoming"
         return
     fi
+    hgit_goto_context
     CURR_BRANCH="$(hgit_branch)"
     REMOTE="$(hgit_remote_for_branch "$CURR_BRANCH")"
     git fetch --quiet "$REMOTE" "$CURR_BRANCH"
@@ -905,6 +1144,7 @@ function hgit_outgoing {
         echo "Usage: hgit outgoing"
         return
     fi
+    hgit_goto_context
     CURR_BRANCH="$(hgit_branch)"
     REMOTE="$(hgit_remote_for_branch "$CURR_BRANCH")"
     git fetch --quiet "$REMOTE" "$CURR_BRANCH"
@@ -944,6 +1184,7 @@ function hgit_log {
         esac
         shift
     done
+    hgit_goto_context
     if [ -n "$COMMIT" ]; then
         git log --color=always "$COMMIT^..$COMMIT" -- "${FILES[@]}" | less -RF
     else
@@ -973,6 +1214,8 @@ function hgit_pr {
     if [ "${1:-}" = "-d" ] || [ "${1:-}" = "--dry-run" ] || [ -n "${SSH_CONNECTION:-}" ]; then
         DRY_RUN="true"
     fi
+
+    hgit_goto_context
 
     if hgit_last_commit_not_yet_pushed; then
         hgit_push
@@ -1197,7 +1440,7 @@ function hgit_ignore {
         if [ "$GITIGNORE_EXISTED" = "false" ]; then
             hgit_add "$REPO_ROOT/.gitignore"
         fi
-        hgit_commit "$REPO_ROOT/.gitignore" -m "gitignore $1"
+        hgit_commit_impl "$REPO_ROOT/.gitignore" -m "gitignore $1"
         shift
     done
 }

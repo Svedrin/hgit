@@ -18,6 +18,10 @@ _hgit_complete_use () {
     _hgit_complete_branches
 }
 
+_hgit_complete_join () {
+    _hgit_complete_branches
+}
+
 _hgit_completions()
 {
     # Do we have a subdir?
@@ -43,7 +47,7 @@ _hgit_completions()
         fi
     else
         # Nope, complete with a list of commands
-        ALL_COMMANDS="status st diff d diff-staging ds dc commit ci change c add cp mv rm cat forget revert re ignore gh branches bs use"
+        ALL_COMMANDS="status st diff d diff-staging ds dc commit ci change c add cp mv rm cat forget revert re ignore gh branches bs use join"
         COMPREPLY=($(compgen -W "$ALL_COMMANDS" -- "${COMP_WORDS[1]}"))
     fi
 }
