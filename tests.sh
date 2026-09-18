@@ -313,6 +313,26 @@ function test_hgit_mv_already_failure_restores_workdir() {
     assert_exists x/y.txt
 }
 
+function test_hgit_st_and_status_show_stash() {
+    mv_test_repo
+    run_git commit -m init
+    hgit_st > "$TEMPDIR/st.txt"
+    hgit_status > "$TEMPDIR/status.txt"
+    assert_fails grep -q "stash" "$TEMPDIR/st.txt" "$TEMPDIR/status.txt"
+
+    echo changed >> a/h.txt
+    run_git stash
+    hgit_st > "$TEMPDIR/st.txt"
+    hgit_status > "$TEMPDIR/status.txt"
+    assert grep -q "^Your stash currently has 1 entry$" "$TEMPDIR/st.txt"
+    assert grep -q "^Your stash currently has 1 entry$" "$TEMPDIR/status.txt"
+
+    echo more >> a/h.txt
+    run_git stash
+    hgit_st > "$TEMPDIR/st.txt"
+    assert grep -q "^Your stash currently has 2 entries$" "$TEMPDIR/st.txt"
+}
+
 # Set up a repo with one commit and some uncommitted work in it, and cd into it.
 function secondscreen_test_repo() {
     rm -rf "$TEMPDIR/2nd" "$TEMPDIR/2nd-2nd-side"*
@@ -538,6 +558,7 @@ run_test test_hgit_mv_from_subdir_and_outside
 run_test test_hgit_mv_already
 run_test test_hgit_mv_already_dir_renamed_over_samename_child
 run_test test_hgit_mv_already_failure_restores_workdir
+run_test test_hgit_st_and_status_show_stash
 run_test test_hgit_2nd_merges_back
 run_test test_hgit_2nd_default_name
 run_test test_hgit_2nd_starts_clean

@@ -311,24 +311,33 @@ function hgit_status {
     if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
         echo "Show the current status of the working directory and which branch we're in."
         echo "Uses a pretty verbose syntax, see \`hgit st\` for a shorter one."
+        echo "Also tells you if there are entries left in the stash."
         echo
         echo "Usage: hgit status [-h|--help]"
         return
     fi
     hgit_goto_context
-    git status "$@"
+    git status --show-stash "$@"
 }
 
 function hgit_st {
     if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
         echo "Show the current status of the working directory and which branch we're in."
         echo "Uses a pretty concise syntax, see \`hgit status\` for a more verbose one."
+        echo "Also tells you if there are entries left in the stash."
         echo
         echo "Usage: hgit st [-h|--help]"
         return
     fi
     hgit_goto_context
     git status --short --branch "$@"
+    # git ignores --show-stash in short format, so do it ourselves, in git's words.
+    STASHED="$(git stash list | wc -l)"
+    if [ "$STASHED" = 1 ]; then
+        echo "Your stash currently has 1 entry"
+    elif [ "$STASHED" -gt 1 ]; then
+        echo "Your stash currently has $STASHED entries"
+    fi
 }
 
 # Diff
