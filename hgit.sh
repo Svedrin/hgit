@@ -933,6 +933,13 @@ function hgit_agent {
         echo "automatically operate on this worktree instead, until you 'hgit use' a"
         echo "branch that doesn't have one."
         echo
+        echo "If you're happy with your changes, you can use 'hgit join <branch name>' to"
+        echo "clean up the sandbox and worktree, and merge the changes back into $MASTER_BRANCH."
+        echo
+        echo "If you want to throw away the changes instead of commiting them, run"
+        echo "'hgit kill <branch name>' which will perform the same cleanup and then"
+        echo "delete the branch without merging."
+        echo
         echo "The command used to start the agent is configurable via AGENT_CMD in"
         echo ".git/hgitrc, e.g.:"
         echo
