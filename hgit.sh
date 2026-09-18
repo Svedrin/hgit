@@ -710,12 +710,33 @@ function hgit_switch_to_branch {
     fi
 }
 
+function hgit_remove_sandboxes_for_worktree {
+    local wt="$1"
+    if ! command -v sbx &>/dev/null; then
+        return
+    fi
+    if command -v jq &>/dev/null; then
+        local SANDBOXES
+        SANDBOXES="$(sbx list --json 2>/dev/null | jq -r --arg wt "$wt" '.sandboxes[]? | select(.workspaces[]? == $wt) | .name')"
+        for SANDBOX in $SANDBOXES; do
+            echo "Removing sandbox $SANDBOX..."
+            sbx rm "$SANDBOX"
+        done
+    else
+        sbx list | grep "$wt" | while read SANDBOX _; do
+            echo "Removing sandbox $SANDBOX..."
+            sbx rm "$SANDBOX"
+        done
+    fi
+}
+
 function hgit_remove_worktree_if_any {
     local branch="$1" wt ctxfile ctx
     wt="$(hgit_worktree_path_for_branch "$branch")"
     if [ -z "$wt" ]; then
         return
     fi
+    hgit_remove_sandboxes_for_worktree "$wt"
     git worktree remove "$wt"
     ctxfile="$(hgit_context_file 2>/dev/null || true)"
     if [ -n "$ctxfile" ] && [ -f "$ctxfile" ]; then
@@ -875,7 +896,8 @@ function hgit_kill {
         echo
         echo "Usage: hgit kill [-h|--help] <branch name|--all>"
         echo
-        echo "If the branch has a worktree (see 'hgit agent'), it is removed first."
+        echo "If the branch has an agent worktree (see 'hgit agent'), any sandboxes"
+        echo "and the worktree itself are cleaned up before the branch is deleted."
         return
     fi
     hgit_use "$MASTER_BRANCH"
@@ -984,21 +1006,6 @@ function hgit_join {
     fi
 
     cd "$MAIN_WT"
-
-    if command -v sbx &>/dev/null; then
-        if command -v jq &>/dev/null; then
-            SANDBOXES="$(sbx list --json 2>/dev/null | jq -r --arg wt "$WT_DIR" '.sandboxes[]? | select(.workspaces[]? == $wt) | .name')"
-            for SANDBOX in $SANDBOXES; do
-                echo "Removing sandbox $SANDBOX..."
-                sbx rm "$SANDBOX"
-            done
-        else
-            sbx list | grep "$WT_DIR" | while read SANDBOX _; do
-                echo "Removing sandbox $SANDBOX..."
-                sbx rm "$SANDBOX"
-            done
-        fi
-    fi
 
     hgit_with_stash git checkout "$MASTER_BRANCH"
     git merge "$BRANCH"
