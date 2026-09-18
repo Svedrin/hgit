@@ -323,21 +323,37 @@ function secondscreen_test_repo() {
     echo 1 > g.txt
     run_git add -A
     run_git commit -m init
-    # Uncommitted work: one modified, one staged, one untracked file.
+    # Uncommitted work: one modified and one untracked file.
     echo wip > g.txt
-    echo new > staged.txt
-    run_git add staged.txt
     echo untracked > u.txt
+}
+
+# Run the second screen with the given commands typed into its shell (one
+# session per argument), output goes to $TEMPDIR/2nd.txt.
+function secondscreen_run() {
+    local name="$1" input=""
+    shift
+    for session in "$@"; do
+        input+="$session"$'\nexit\n'
+    done
+    printf '%s' "$input" | hgit_2nd "$name" > "$TEMPDIR/2nd.txt" 2>&1
 }
 
 function assert_no_branch {
     assert_fails "`which git`" rev-parse --verify --quiet "refs/heads/$1" >/dev/null
 }
 
+function assert_branch {
+    assert "`which git`" rev-parse --verify --quiet "refs/heads/$1" >/dev/null
+}
+
+function assert_output_has {
+    assert grep -q -- "$1" "$TEMPDIR/2nd.txt"
+}
+
 function test_hgit_2nd_merges_back() {
     secondscreen_test_repo
-    printf 'echo side > side.txt\ngit add side.txt\ngit commit -qm side\nexit\n' \
-        | hgit_2nd side > "$TEMPDIR/2nd.txt" 2>&1
+    secondscreen_run side 'echo side > side.txt; git add side.txt; git commit -qm side'
     # The side task is merged into our branch, and cleaned up.
     assert_exists side.txt
     assert_gone "$TEMPDIR/2nd-2nd-side"
@@ -345,14 +361,13 @@ function test_hgit_2nd_merges_back() {
     assert [ "`hgit_branch`" = "master" ]
     # Our uncommitted work is untouched.
     assert [ "`cat g.txt`" = "wip" ]
-    assert_staged "A  staged.txt"
     assert_exists u.txt
+    assert [ "`git stash list | wc -l`" = "0" ]
 }
 
 function test_hgit_2nd_default_name() {
     secondscreen_test_repo
-    printf 'echo side > side.txt\ngit add side.txt\ngit commit -qm side\nexit\n' \
-        | hgit_2nd > "$TEMPDIR/2nd.txt" 2>&1
+    secondscreen_run "" 'echo side > side.txt; git add side.txt; git commit -qm side'
     assert_exists side.txt
     assert_no_branch 2nd-master
 }
@@ -361,82 +376,143 @@ function test_hgit_2nd_starts_clean() {
     secondscreen_test_repo
     # None of our uncommitted work shows up in the second screen. Nothing to
     # commit there, so merging is a no-op.
-    printf 'test ! -e u.txt && test ! -e staged.txt && test "$(cat g.txt)" = 1\nexit\n' \
-        | hgit_2nd side > "$TEMPDIR/2nd.txt" 2>&1
+    secondscreen_run side 'test ! -e u.txt && test "$(cat g.txt)" = 1'
     assert_gone "$TEMPDIR/2nd-2nd-side"
     assert_no_branch side
+}
+
+function test_hgit_2nd_warns_not_to_commit_meanwhile() {
+    secondscreen_test_repo
+    secondscreen_run side 'true'
+    assert_output_has "don't commit, pull or add"
 }
 
 function test_hgit_2nd_dirty_worktree_goes_back_to_shell() {
     secondscreen_test_repo
     # First session leaves an untracked file behind, second one removes it again.
-    printf 'echo junk > junk.txt\nexit\nrm junk.txt\necho side > side.txt\ngit add side.txt\ngit commit -qm side\nexit\n' \
-        | hgit_2nd side > "$TEMPDIR/2nd.txt" 2>&1
-    assert grep -q "not clean" "$TEMPDIR/2nd.txt"
-    assert grep -q -- "?? junk.txt" "$TEMPDIR/2nd.txt"
+    secondscreen_run side \
+        'echo junk > junk.txt' \
+        'rm junk.txt; echo side > side.txt; git add side.txt; git commit -qm side'
+    assert_output_has "not clean"
+    assert_output_has "?? junk.txt"
     assert_exists side.txt
     assert_no_branch side
 }
 
-function test_hgit_2nd_wip_conflicting_with_merge_leaves_markers() {
+function test_hgit_2nd_wip_overlapping_with_side_task_leaves_markers() {
     secondscreen_test_repo
     # The side task touches a file we have uncommitted changes in. The merge
     # itself works, so everything is cleaned up, but our changes are left
-    # with conflict markers and the stash entry is kept.
-    printf 'echo side > g.txt\ngit commit -qam side\nexit\n' \
-        | hgit_2nd side > "$TEMPDIR/2nd.txt" 2>&1
-    assert grep -q "conflict" "$TEMPDIR/2nd.txt"
+    # with conflict markers.
+    secondscreen_run side 'echo side > g.txt; git commit -qam side'
+    assert_output_has "<<<<<<< markers"
+    assert_output_has "g.txt"
     assert grep -q "<<<<<<<" g.txt
     assert grep -q "wip" g.txt
     assert grep -q "side" g.txt
-    assert [ "`git stash list | wc -l`" = "1" ]
     assert_gone "$TEMPDIR/2nd-2nd-side"
     assert_no_branch side
 }
 
-function test_hgit_2nd_keeps_worktree_if_merge_fails() {
+function test_hgit_2nd_refuses_to_start_with_staged_changes() {
     secondscreen_test_repo
-    # Our branch moves on while we're in the second screen, and the two
-    # changes conflict.
-    printf 'echo side > f.txt\ngit commit -qam side\necho main > "%s/f.txt"\ngit -C "%s" commit -qm main -- f.txt\nexit\n' \
-        "$TEMPDIR/2nd" "$TEMPDIR/2nd" \
-        | assert_fails hgit_2nd side > "$TEMPDIR/2nd.txt" 2>&1
-    assert grep -q "failed" "$TEMPDIR/2nd.txt"
-    assert grep -q "git stash pop" "$TEMPDIR/2nd.txt"
-    assert_exists "$TEMPDIR/2nd-2nd-side"
-    assert "`which git`" rev-parse --verify --quiet refs/heads/side >/dev/null
-    assert grep -q "<<<<<<<" f.txt
-    # The merge blocks popping our changes, they wait in the stash.
-    assert [ "`git stash list | wc -l`" = "1" ]
+    run_git add g.txt
+    assert_fails secondscreen_run side 'true'
+    assert_output_has "staging area"
+    assert_output_has "g.txt"
+    assert_output_has "hgit forget"
+    assert_gone "$TEMPDIR/2nd-2nd-side"
+    assert_no_branch side
 
-    # Resolve the merge, get our changes back and retry, which resumes the
-    # worktree and cleans up.
-    echo resolved > f.txt
-    run_git commit -am "merge side"
-    run_git stash pop
-    printf 'exit\n' | hgit_2nd side > "$TEMPDIR/2nd.txt" 2>&1
-    assert grep -q "resuming" "$TEMPDIR/2nd.txt"
+    # After following the advice, it works.
+    hgit_forget g.txt >/dev/null
+    secondscreen_run side 'true'
+    assert_no_branch side
+    assert [ "`cat g.txt`" = "wip" ]
+}
+
+function test_hgit_2nd_refuses_to_merge_with_staged_changes() {
+    secondscreen_test_repo
+    # We add something to the staging area while the second screen is open.
+    assert_fails secondscreen_run side \
+        "echo side > side.txt; git add side.txt; git commit -qm side; git -C \"$TEMPDIR/2nd\" add u.txt"
+    assert_output_has "staging area"
+    assert_output_has "u.txt"
+    assert_output_has "hgit 2nd side"
+    assert_exists "$TEMPDIR/2nd-2nd-side"
+    assert_branch side
+    assert_gone side.txt
+    assert [ "`git stash list | wc -l`" = "0" ]
+
+    hgit_forget u.txt >/dev/null
+    secondscreen_run side 'true'
+    assert_output_has "resuming"
+    assert_exists side.txt
+    assert_gone "$TEMPDIR/2nd-2nd-side"
+    assert_no_branch side
+}
+
+function test_hgit_2nd_brings_in_changes_our_branch_got_meanwhile() {
+    secondscreen_test_repo
+    # We commit to our branch while the second screen is open, in a way that
+    # doesn't collide with the side task.
+    secondscreen_run side \
+        "echo side > side.txt; git add side.txt; git commit -qm side; echo main > \"$TEMPDIR/2nd/f.txt\"; git -C \"$TEMPDIR/2nd\" commit -qm main -- f.txt"
+    assert_output_has "has changed since"
+    assert [ "`cat f.txt`" = "main" ]
+    assert_exists side.txt
+    assert_gone "$TEMPDIR/2nd-2nd-side"
+    assert_no_branch side
+    assert [ "`cat g.txt`" = "wip" ]
+    assert_exists u.txt
+}
+
+function test_hgit_2nd_tells_what_to_do_if_our_branch_collides() {
+    secondscreen_test_repo
+    # We commit to our branch while the second screen is open, and it collides
+    # with the side task.
+    assert_fails secondscreen_run side \
+        "echo side > f.txt; git commit -qam side; echo main > \"$TEMPDIR/2nd/f.txt\"; git -C \"$TEMPDIR/2nd\" commit -qm main -- f.txt"
+    assert_output_has "collide"
+    assert_output_has "hgit 2nd side"
+    assert_output_has "git merge master"
+    assert_output_has "git commit -a --no-edit"
+    assert_output_has "hgit kill side"
+    # Nothing was left half-done anywhere: no merge in progress in either
+    # place, no stash, our changes are untouched, the side task is intact.
+    assert [ "`cat f.txt`" = "main" ]
+    assert [ "`cat g.txt`" = "wip" ]
+    assert [ "`git stash list | wc -l`" = "0" ]
+    assert_exists "$TEMPDIR/2nd-2nd-side"
+    assert_branch side
+    assert [ -z "`git -C "$TEMPDIR/2nd-2nd-side" status --porcelain`" ]
+    assert [ "`git -C "$TEMPDIR/2nd-2nd-side" show side:f.txt`" = "side" ]
+
+    # Follow the advice exactly.
+    secondscreen_run side 'git merge master || true; echo resolved > f.txt; git commit -a --no-edit -q'
     assert [ "`cat f.txt`" = "resolved" ]
     assert [ "`cat g.txt`" = "wip" ]
     assert_gone "$TEMPDIR/2nd-2nd-side"
     assert_no_branch side
 }
 
-function test_hgit_2nd_keeps_worktree_if_merge_is_refused() {
+function test_hgit_2nd_refuses_to_overwrite_untracked_files() {
     secondscreen_test_repo
-    # Nothing but staged changes: hgit_with_stash finds nothing modified to
-    # stash. Our branch moves on while we're in the second screen, so the merge
-    # is not a fast-forward, and git refuses to do it with staged changes around.
-    run_git checkout g.txt
-    printf 'echo side > side.txt\ngit add side.txt\ngit commit -qm side\necho main > "%s/f.txt"\ngit -C "%s" commit -qm main -- f.txt\nexit\n' \
-        "$TEMPDIR/2nd" "$TEMPDIR/2nd" \
-        | assert_fails hgit_2nd side > "$TEMPDIR/2nd.txt" 2>&1
+    # The side task adds a file that we have lying around, untracked.
+    assert_fails secondscreen_run side 'echo side > u.txt; git add u.txt; git commit -qm side'
+    assert_output_has "u.txt"
+    assert_output_has "hgit 2nd side"
+    assert [ "`cat u.txt`" = "untracked" ]
+    assert [ "`cat g.txt`" = "wip" ]
     assert_exists "$TEMPDIR/2nd-2nd-side"
-    assert "`which git`" rev-parse --verify --quiet refs/heads/side >/dev/null
-    # Our uncommitted changes are back where they were.
-    assert [ "`cat g.txt`" = "1" ]
-    assert_staged "A  staged.txt"
-    assert [ "`git stash list | wc -l`" = "0" ]
+    assert_branch side
+
+    mv u.txt u-mine.txt
+    secondscreen_run side 'true'
+    assert [ "`cat u.txt`" = "side" ]
+    assert [ "`cat u-mine.txt`" = "untracked" ]
+    assert_gone "$TEMPDIR/2nd-2nd-side"
+    assert_no_branch side
 }
 
 function test_hgit_2nd_refuses_current_branch_and_detached_head() {
@@ -445,6 +521,11 @@ function test_hgit_2nd_refuses_current_branch_and_detached_head() {
     run_git checkout --detach
     assert_fails hgit_2nd side 2>/dev/null
     assert_gone "$TEMPDIR/2nd-2nd-side"
+}
+
+function test_hgit_2nd_help_has_no_git_jargon() {
+    hgit_2nd --help > "$TEMPDIR/2nd.txt"
+    assert_fails grep -qiw -e "stash" -e "stashed" -e "fast-forward" -e "rebase" -e "worktree" "$TEMPDIR/2nd.txt"
 }
 
 run_test test_hgit_basic_workflow
@@ -460,8 +541,13 @@ run_test test_hgit_mv_already_failure_restores_workdir
 run_test test_hgit_2nd_merges_back
 run_test test_hgit_2nd_default_name
 run_test test_hgit_2nd_starts_clean
+run_test test_hgit_2nd_warns_not_to_commit_meanwhile
 run_test test_hgit_2nd_dirty_worktree_goes_back_to_shell
-run_test test_hgit_2nd_wip_conflicting_with_merge_leaves_markers
-run_test test_hgit_2nd_keeps_worktree_if_merge_fails
-run_test test_hgit_2nd_keeps_worktree_if_merge_is_refused
+run_test test_hgit_2nd_wip_overlapping_with_side_task_leaves_markers
+run_test test_hgit_2nd_refuses_to_start_with_staged_changes
+run_test test_hgit_2nd_refuses_to_merge_with_staged_changes
+run_test test_hgit_2nd_brings_in_changes_our_branch_got_meanwhile
+run_test test_hgit_2nd_tells_what_to_do_if_our_branch_collides
+run_test test_hgit_2nd_refuses_to_overwrite_untracked_files
 run_test test_hgit_2nd_refuses_current_branch_and_detached_head
+run_test test_hgit_2nd_help_has_no_git_jargon

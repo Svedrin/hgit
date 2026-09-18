@@ -492,11 +492,14 @@ The worktree at /home/me/hgit-2nd-fix-typo is not clean:
 Commit or revert the rest, then exit the shell again to merge back.
 ```
 
-Once the worktree is clean, the branch is merged back into the branch you started from, as a fast-forward if possible. Then the worktree is removed and the branch is deleted, and you can carry on with your uncommitted changes, which have not been touched.
+Once everything is committed, your work is brought back into the branch you started from, and the second copy and its branch are removed. Then you carry on with your uncommitted changes, which have not been touched. If they overlap with what the side task changed, you'll find `<<<<<<<` markers in those files, and `h 2nd` lists them for you.
 
-For the merge, your uncommitted changes are stashed and restored afterwards, like `h use` does it. If they clash with what was merged, you'll find conflict markers in your files, right on the branch you're working on. The stash entry is kept until you `git stash drop` it. The worktree and branch are cleaned up in this case too, since the merge itself worked.
+There are two rules while the second screen is open, because the whole point is that your main checkout stays as it is:
 
-If the merge itself fails, `h 2nd` keeps the worktree and the branch. This happens with conflicts, when your branch moved on while you were in the second screen, or when you only have staged changes and the merge isn't a fast-forward. In that case, sort things out in your main checkout. If your uncommitted changes ended up in the stash because of a conflicted merge, `git stash pop` them once you've committed the merge. Then run `h 2nd fix-typo` again, which resumes the worktree, and exit the shell right away to clean up. `h kill fix-typo` throws it all away instead.
+* Don't commit or pull in your main checkout.
+* Don't add anything to the staging area there (`h add`). If you already have, `h 2nd` refuses to start and lists the files. `h forget <files>` takes them out again without touching the files themselves.
+
+If you break a rule anyway, or the side task adds a file with the same name as one of your untracked files, nothing is lost. `h 2nd` explains what happened and what to do, with the exact commands, and your side task stays in its branch. Run the same `h 2nd fix-typo` command again to resume it, and exit the shell right away once you've sorted things out. `h kill fix-typo` throws the side task away instead.
 
 
 # Notable differences between `hgit` and `git`
