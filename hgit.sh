@@ -948,7 +948,7 @@ function hgit_agent {
         read -r AGENT_CMD
     fi
     if command -v sbx &>/dev/null; then
-        exec sbx run "$AGENT_CMD" . "$MAIN_WT" -- $AGENT_ARGS
+        exec sbx run "$AGENT_CMD" . "$MAIN_WT:ro" "$MAIN_WT/.git" -- $AGENT_ARGS
     else
         exec "$AGENT_CMD" $AGENT_ARGS
     fi
