@@ -970,11 +970,13 @@ function hgit_agent {
     hgit_set_context "$WT_DIR"
     cd "$WT_DIR"
 
-    if [ -z "${AGENT_CMD:-}" ] && command -v claude &>/dev/null; then
-        AGENT_CMD="claude"
-    else
-        echo -n "claude not found and no AGENT_CMD configured. What agent command should I run? "
-        read -r AGENT_CMD
+    if [ -z "${AGENT_CMD:-}" ]; then
+        if command -v claude &>/dev/null; then
+            AGENT_CMD="claude"
+        else
+            echo -n "claude not found and no AGENT_CMD configured. What agent command should I run? "
+            read -r AGENT_CMD
+        fi
     fi
     if command -v sbx &>/dev/null; then
         exec sbx run "$AGENT_CMD" . "$MAIN_WT:ro" "$MAIN_WT/.git" -- ${AGENT_ARGS:-}
